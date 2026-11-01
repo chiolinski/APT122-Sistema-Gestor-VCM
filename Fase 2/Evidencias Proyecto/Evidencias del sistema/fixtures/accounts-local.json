@@ -1,0 +1,32 @@
+[
+  {
+    "email": "admin@example.test",
+    "name": "Administración ficticia",
+    "role": "ADMIN",
+    "title": "Administrador"
+  },
+  {
+    "email": "coordinacion@example.test",
+    "name": "Coordinación ficticia",
+    "role": "COORDINATOR",
+    "title": "Coordinador CITT"
+  },
+  {
+    "email": "direccion@example.test",
+    "name": "Dirección ficticia",
+    "role": "COORDINATOR",
+    "title": "Director de Carrera"
+  },
+  {
+    "email": "docente1@example.test",
+    "name": "Docente ficticio 01",
+    "role": "TEACHER",
+    "title": "Docente"
+  },
+  {
+    "email": "docente2@example.test",
+    "name": "Docente ficticio 02",
+    "role": "TEACHER",
+    "title": "Docente"
+  }
+]
