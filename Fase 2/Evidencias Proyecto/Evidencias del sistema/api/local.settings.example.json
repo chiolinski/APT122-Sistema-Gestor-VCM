@@ -1,0 +1,12 @@
+{
+  "IsEncrypted": false,
+  "Values": {
+    "FUNCTIONS_WORKER_RUNTIME": "node",
+    "AzureWebJobsStorage": "UseDevelopmentStorage=true",
+    "AZURE_SQL_CONNECTION_STRING": "Server=127.0.0.1,14333;Database=vcm_piloto_2026_local;User Id=sa;Password=GENERAR_CON_LOCAL_CONFIGURE;Encrypt=false;TrustServerCertificate=true;Connection Timeout=5;",
+    "AZURE_STORAGE_CONNECTION_STRING": "UseDevelopmentStorage=true",
+    "AZURE_STORAGE_VIDEO_CONNECTION_STRING": "UseDevelopmentStorage=true",
+    "AZURE_STORAGE_VIDEO_ACCOUNT_URL": "http://127.0.0.1:10000/devstoreaccount1",
+    "AUTH_COOKIE_SECURE": "false"
+  }
+}
