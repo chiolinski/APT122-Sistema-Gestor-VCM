@@ -1,0 +1,25 @@
+name: vcm-piloto-2026-local
+services:
+  sql:
+    image: mcr.microsoft.com/mssql/server:2022-latest
+    environment:
+      ACCEPT_EULA: "Y"
+      MSSQL_PID: Developer
+      MSSQL_SA_PASSWORD: ${VCM_LOCAL_SQL_PASSWORD:?Ejecuta npm run local:configure}
+    ports:
+      - "127.0.0.1:14333:1433"
+    volumes:
+      - sql-data:/var/opt/mssql
+    mem_limit: 3g
+  storage:
+    image: mcr.microsoft.com/azure-storage/azurite:3.35.0
+    command: azurite --blobHost 0.0.0.0 --queueHost 0.0.0.0 --tableHost 0.0.0.0 --location /data --skipApiVersionCheck
+    ports:
+      - "127.0.0.1:10000:10000"
+      - "127.0.0.1:10001:10001"
+      - "127.0.0.1:10002:10002"
+    volumes:
+      - storage-data:/data
+volumes:
+  sql-data:
+  storage-data:
