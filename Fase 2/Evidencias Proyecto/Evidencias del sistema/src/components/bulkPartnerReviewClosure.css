@@ -1,0 +1,7 @@
+.bulk-review-closure > p { max-width: 80ch; color: var(--muted); line-height: 1.6; }
+.bulk-review-closure__controls { display: flex; align-items: end; gap: 16px; margin: 24px 0; flex-wrap: wrap; }
+.bulk-review-closure__controls .field { width: min(100%, 280px); }
+.bulk-review-closure .responsive-table { margin: 18px 0; }
+.bulk-review-closure h3 { margin-top: 24px; }
+.bulk-review-closure .bulk-review-closure__result { color: var(--ink); padding: 16px; background: var(--soft); border-left: 4px solid var(--yellow); }
+.bulk-review-closure .bulk-review-closure__error { color: #a12620; }

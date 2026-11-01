@@ -1,0 +1,22 @@
+.partner-review-manager .card-heading p { color: var(--muted); font-size: 12px; line-height: 1.7; margin: 8px 0 0; }
+.partner-review-manager .card-heading { flex-wrap: wrap; gap: 12px; }
+.partner-review-manager > .field { margin-bottom: 18px; }
+.partner-review-manager__hint { color: var(--muted); font-size: 12px; line-height: 1.8; margin: 14px 0; }
+.partner-review-manager__link { display: grid; gap: 12px; border: 1px solid #d6bd69; background: #fff9e8; border-radius: 9px; padding: 18px; margin: 20px 0; }
+.partner-review-manager__link label { font-size: 12px; font-weight: 600; }
+.partner-review-manager__link small { color: #706442; font-size: 11px; line-height: 1.6; }
+.partner-review-manager__link .button { justify-self: start; }
+.partner-review-manager__notice { font-size: 12px; line-height: 1.8; color: #346640; }
+.partner-review-manager__error { font-size: 12px; line-height: 1.8; color: #a63b2a; display: flex; flex-wrap: wrap; gap: 12px; margin: 18px 0; align-items: center; }
+.partner-review-manager__record { margin-top: 22px; border-top: 1px solid var(--line); padding-top: 18px; }
+.partner-review-manager__record summary { cursor: pointer; font-size: 13px; font-weight: 600; line-height: 1.8; }
+.partner-review-manager__record summary span { display: block; font-size: 11px; color: var(--muted); font-weight: 400; }
+.partner-review-manager__revoke { display: flex; align-items: center; justify-content: space-between; gap: 16px; margin: 18px 0; }
+.partner-review-manager__revoke small { font-size: 11px; color: var(--muted); }
+.partner-review-manager__evaluation { border-top: 1px solid var(--line); padding: 16px 0; }
+.partner-review-manager__evaluation > strong, .partner-review-manager__evaluation > span { display: block; font-size: 12px; }
+.partner-review-manager__evaluation > span { color: var(--muted); font-size: 11px; margin-top: 6px; }
+.partner-review-manager__evaluation dt { font-size: 11px; font-weight: 600; margin: 14px 0 6px; }
+.partner-review-manager__evaluation dd { font-size: 12px; line-height: 1.8; margin: 0; white-space: pre-wrap; overflow-wrap: anywhere; }
+.partner-review-manager button:focus-visible, .partner-review-manager input:focus-visible, .partner-review-manager summary:focus-visible { outline: 2px solid #946500; outline-offset: 3px; }
+@media (max-width: 600px) { .partner-review-manager__revoke { align-items: flex-start; flex-direction: column; } }
