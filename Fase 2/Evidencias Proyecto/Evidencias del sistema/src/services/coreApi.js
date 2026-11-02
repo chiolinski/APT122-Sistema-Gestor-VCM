@@ -28,6 +28,11 @@ export function getCoordinationMonitoring() {
   return apiRequest("projects/monitoring");
 }
 
+export function getIndicators(period) {
+    return apiRequest(`indicators${period ? `?
+  period=${encodeURIComponent(period)}` : ""}`);
+}
+
 export async function downloadCoordinationMonitoring(filters = {}) {
   const params = new URLSearchParams();
   if (filters.scope && filters.scope !== "all") params.set("scope", filters.scope);

@@ -8,6 +8,8 @@ import {
   Clock3,
   Download,
   Eye,
+  Flag,
+  GraduationCap,
   ListChecks,
   LoaderCircle,
   RefreshCw,
@@ -17,7 +19,7 @@ import {
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { Link } from "react-router-dom";
 import { Button, EmptyState, MetricCard, PageHeader, SearchInput, Select } from "../components/UI";
-import { downloadCoordinationMonitoring, getCoordinationMonitoring } from "../services/coreApi";
+import { downloadCoordinationMonitoring, getCoordinationMonitoring, getIndicators } from "../services/coreApi";
 
 const FILTERS = [
   { id: "all", label: "Todos" },
@@ -28,6 +30,7 @@ const FILTERS = [
 
 export default function CoordinationMonitoringPage() {
   const [report, setReport] = useState(null);
+  const [indicators, setIndicators] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
   const [search, setSearch] = useState("");
@@ -42,6 +45,7 @@ export default function CoordinationMonitoringPage() {
   const loadMonitoring = useCallback(async () => {
     setLoading(true);
     setError("");
+        getIndicators().then(setIndicators).catch(() => setIndicators(null));
     try {
       setReport(await getCoordinationMonitoring());
     } catch (requestError) {
@@ -140,7 +144,19 @@ export default function CoordinationMonitoringPage() {
             <MetricCard icon={Users} label="Seguimientos cerrados" value={`${report.summary.completedTeacherFollowUps}/${report.summary.teacherFollowUps}`} detail="Docente por proyecto" tone="green" />
             <MetricCard icon={CalendarClock} label="Listos para avanzar" value={report.summary.readyProjects} detail="Requieren acción o supervisión" tone="purple" />
           </div>
-
+          {indicators && (
+            <section className="monitoring-indicators" aria-labelledby="monitoring-indicators-title">
+              <p className="eyebrow">Indicadores VcM {indicators.period || ""}</p>
+              <h2 id="monitoring-indicators-title">Participación y avance</h2>
+              <div className="metrics-grid">
+                <MetricCard icon={GraduationCap} label="Estudiantes participantes" value={formatRatio(indicators.participation)} detail={ratioDetail(indicators.participation, "estudiantes")} tone="green" />
+                {indicators.milestoneFunnel.map((step) => (
+                  <MetricCard key={step.milestone} icon={Flag} label={`Secciones con Hito ${step.milestone}`} value={formatRatio(step)} detail={ratioDetail(step, "secciones")} tone="blue" />
+                ))}
+              </div>
+            </section>
+          )}
+          
           <MonitoringAlerts alerts={report.alerts} projects={report.projects} />
 
           <section className="monitoring-workspace" aria-labelledby="monitoring-projects-title">
@@ -279,4 +295,12 @@ function MilestoneTrack({ milestones }) {
 function formatDate(value) {
   if (!value) return "Sin fecha";
   return new Intl.DateTimeFormat("es-CL", { day: "2-digit", month: "short", year: "numeric", timeZone: "UTC" }).format(new Date(`${value}T00:00:00Z`));
+}
+
+function formatRatio(metric) {
+  return metric?.evaluable ? `${metric.percent} %` : "No evaluable";
+}
+
+function ratioDetail(metric, noun) {
+  return `${metric?.numerator ?? 0} de ${metric?.denominator ?? 0} ${noun}`;
 }
