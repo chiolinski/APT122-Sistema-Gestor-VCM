@@ -12,9 +12,13 @@ import {
   GraduationCap,
   ListChecks,
   LoaderCircle,
+  MessageSquareText,
   RefreshCw,
   School,
+  Star,
+  UserMinus,
   Users,
+  Video,
 } from "lucide-react";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { Link } from "react-router-dom";
@@ -153,6 +157,10 @@ export default function CoordinationMonitoringPage() {
                 {indicators.milestoneFunnel.map((step) => (
                   <MetricCard key={step.milestone} icon={Flag} label={`Secciones con Hito ${step.milestone}`} value={formatRatio(step)} detail={ratioDetail(step, "secciones")} tone="blue" />
                 ))}
+                <MetricCard icon={Video} label="Equipos con video entregado" value={formatRatio(indicators.videoDelivery)} detail={ratioDetail(indicators.videoDelivery, "equipos")} tone="purple" />
+                <MetricCard icon={UserMinus} label="Deserción registrada" value={formatRatio(indicators.dropout)} detail={ratioDetail(indicators.dropout, "estudiantes")} tone="yellow" />
+                <MetricCard icon={MessageSquareText} label="Respuesta del socio" value={formatRatio(indicators.partnerResponse)} detail={ratioDetail(indicators.partnerResponse, "revisiones")} tone="blue" />
+                <MetricCard icon={Star} label="Valoración del socio" value={formatRating(indicators.partnerRating)} detail={`${indicators.partnerRating.count} evaluaciones`} tone="green" />
               </div>
             </section>
           )}
@@ -303,4 +311,8 @@ function formatRatio(metric) {
 
 function ratioDetail(metric, noun) {
   return `${metric?.numerator ?? 0} de ${metric?.denominator ?? 0} ${noun}`;
+}
+
+function formatRating(metric) {
+  return metric?.sufficient ? `${metric.average.toFixed(1).replace(".", ",")} / 5` : "Muestra insuficiente";
 }
