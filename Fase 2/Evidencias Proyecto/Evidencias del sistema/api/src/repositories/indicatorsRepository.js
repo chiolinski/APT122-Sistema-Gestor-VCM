@@ -132,6 +132,16 @@ const PARTNER_RATING_QUERY = `
   INNER JOIN reviews ON reviews.revision_socio_id = evaluation.revision_socio_id;
 `;
 
+const PROJECTS_BY_SCHOOL_QUERY = `
+  WITH projects AS (SELECT DISTINCT proyecto_id, asignatura_id FROM (${PROJECT_SECTIONS}) ps)
+  SELECT school.nombre AS school, COUNT(*) AS projects
+  FROM projects
+  INNER JOIN vcm.Asignatura subject ON subject.asignatura_id = projects.asignatura_id
+  LEFT JOIN vcm.Escuela school ON school.escuela_id = subject.escuela_id
+  GROUP BY school.nombre
+  ORDER BY COUNT(*) DESC, school.nombre;
+`;
+
 async function getIndicators(requestedPeriod) {
   const pool = await getPool();
   const period = await resolvePeriod(pool, requestedPeriod);
@@ -139,9 +149,9 @@ async function getIndicators(requestedPeriod) {
 
   const queries = [
     PARTICIPATION_QUERY, MILESTONE_FUNNEL_QUERY, VIDEO_DELIVERY_QUERY,
-    DROPOUT_QUERY, PARTNER_RESPONSE_QUERY, PARTNER_RATING_QUERY,
+    DROPOUT_QUERY, PARTNER_RESPONSE_QUERY, PARTNER_RATING_QUERY, PROJECTS_BY_SCHOOL_QUERY,
   ];
-  const [participation, milestones, videos, dropout, responses, ratings] = await Promise.all(
+  const [participation, milestones, videos, dropout, responses, ratings, schools] = await Promise.all(
     queries.map((query) => pool.request().input("period", sql.VarChar(20), period).query(query)),
   );
 
@@ -153,6 +163,7 @@ async function getIndicators(requestedPeriod) {
     dropout: dropout.recordset[0],
     responses: responses.recordset[0],
     ratings: ratings.recordset[0],
+    schools: schools.recordset,
   });
 }
 

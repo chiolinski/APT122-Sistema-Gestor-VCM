@@ -1,7 +1,8 @@
 const test = require("node:test");
 const assert = require("node:assert/strict");
 const {
-  buildDropout, buildIndicators, buildMilestoneFunnel, buildPartnerRating, buildPartnerResponse, buildVideoDelivery, normalizePeriod, ratio,
+  buildDropout, buildIndicators, buildMilestoneFunnel, buildPartnerRating, buildPartnerResponse, buildSchoolDistribution,
+  buildVideoDelivery, normalizePeriod, ratio,
 } = require("../src/lib/indicators");
 
 test("ratio calcula el porcentaje redondeado", () => {
@@ -36,6 +37,7 @@ test("sin período todas las métricas quedan No evaluable", () => {
   assert.equal(indicators.dropout.evaluable, false);
   assert.equal(indicators.partnerResponse.evaluable, false);
   assert.equal(indicators.partnerRating.sufficient, false);
+  assert.deepEqual(indicators.projectsBySchool, { total: 0, schools: [] });
 });
 
 test("normalizePeriod acepta vacío y rechaza valores extraños", () => {
@@ -65,4 +67,16 @@ test("M8 promedia la valoración con un decimal", () => {
 
 test("M8 con menos de 3 evaluaciones es Muestra insuficiente", () => {
   assert.deepEqual(buildPartnerRating({ evaluations: 2, ratingSum: 10 }), { count: 2, average: null, sufficient: false });
+});
+
+test("M10 reparte los proyectos por escuela y nombra las asignaturas sin escuela", () => {
+  const distribution = buildSchoolDistribution([
+    { school: "Informática y Telecomunicaciones", projects: 3 },
+    { school: null, projects: 1 },
+  ]);
+  assert.equal(distribution.total, 4);
+  assert.deepEqual(distribution.schools.map((item) => [item.school, item.numerator, item.percent]), [
+    ["Informática y Telecomunicaciones", 3, 75],
+    ["Sin escuela", 1, 25],
+  ]);
 });

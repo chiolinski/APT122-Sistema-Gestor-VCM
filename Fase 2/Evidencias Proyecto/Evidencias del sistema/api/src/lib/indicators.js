@@ -49,7 +49,18 @@ function buildPartnerRating(row = {}) {
   return { count, average: Math.round((sum / count) * 10) / 10, sufficient: true };
 }
 
-function buildIndicators({ period = null, participation, milestones, videos, dropout, responses, ratings } = {}) {
+function buildSchoolDistribution(rows = []) {
+  const total = rows.reduce((sum, row) => sum + (Number(row.projects) || 0), 0);
+  const schools = rows.map((row) => ({
+    school: row.school || "Sin escuela",
+    ...ratio(row.projects, total),
+  }));
+  return { total, schools };
+}
+
+function buildIndicators({
+  period = null, participation, milestones, videos, dropout, responses, ratings, schools,
+} = {}) {
   return {
     period,
     participation: buildParticipation(participation),
@@ -58,10 +69,11 @@ function buildIndicators({ period = null, participation, milestones, videos, dro
     dropout: buildDropout(dropout),
     partnerResponse: buildPartnerResponse(responses),
     partnerRating: buildPartnerRating(ratings),
+    projectsBySchool: buildSchoolDistribution(schools),
   };
 }
 
 module.exports = {
   buildDropout, buildIndicators, buildMilestoneFunnel, buildParticipation, buildPartnerRating, buildPartnerResponse,
-  buildVideoDelivery, normalizePeriod, ratio,
+  buildSchoolDistribution, buildVideoDelivery, normalizePeriod, ratio,
 };
