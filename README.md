@@ -74,3 +74,13 @@ La plataforma digitaliza el ciclo de los proyectos VCM y reúne en un solo siste
 - Israel Del Pino Burdiles (`Isra-delpino`)
 - Rocío Rodríguez Urrutia (`chiolinski`)
 - Pablo Sepúlveda Daza (`PabSepul`)
+
+---
+
+## 📄 Licencia y Derechos de Uso
+
+Este repositorio ha sido desarrollado exclusivamente como material académico para la asignatura **Capstone**. 
+
+Queda estrictamente prohibido cualquier uso, copia, modificación, distribución o reproducción total o parcial de este código y sus recursos fuera del ámbito del desarrollo de dicha asignatura, salvo autorización expresa y por escrito de los autores.
+
+*© 2026. Todos los derechos reservados por los autores.*
