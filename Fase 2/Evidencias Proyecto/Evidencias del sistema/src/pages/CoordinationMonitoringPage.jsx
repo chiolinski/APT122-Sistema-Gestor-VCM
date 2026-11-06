@@ -8,20 +8,15 @@ import {
   Clock3,
   Download,
   Eye,
-  Flag,
-  GraduationCap,
   ListChecks,
   LoaderCircle,
-  MessageSquareText,
   RefreshCw,
   School,
-  Star,
-  UserMinus,
   Users,
-  Video,
 } from "lucide-react";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { Link } from "react-router-dom";
+import IndicatorsPanel from "../components/IndicatorsPanel";
 import { Button, Card, EmptyState, MetricCard, PageHeader, SearchInput, Select } from "../components/UI";
 import { downloadCoordinationMonitoring, getCoordinationMonitoring, getIndicators } from "../services/coreApi";
 
@@ -148,23 +143,7 @@ export default function CoordinationMonitoringPage() {
             <MetricCard icon={Users} label="Seguimientos cerrados" value={`${report.summary.completedTeacherFollowUps}/${report.summary.teacherFollowUps}`} detail="Docente por proyecto" tone="green" />
             <MetricCard icon={CalendarClock} label="Listos para avanzar" value={report.summary.readyProjects} detail="Requieren acción o supervisión" tone="purple" />
           </div>
-          {indicators && (
-            <section className="monitoring-indicators" aria-labelledby="monitoring-indicators-title">
-              <p className="eyebrow">Indicadores VcM {indicators.period || ""}</p>
-              <h2 id="monitoring-indicators-title">Participación y avance</h2>
-              <div className="metrics-grid">
-                <MetricCard icon={GraduationCap} label="Estudiantes participantes" value={formatRatio(indicators.participation)} detail={ratioDetail(indicators.participation, "estudiantes")} tone="green" />
-                {indicators.milestoneFunnel.map((step) => (
-                  <MetricCard key={step.milestone} icon={Flag} label={`Secciones con Hito ${step.milestone}`} value={formatRatio(step)} detail={ratioDetail(step, "secciones")} tone="blue" />
-                ))}
-                <MetricCard icon={Video} label="Equipos con video entregado" value={formatRatio(indicators.videoDelivery)} detail={ratioDetail(indicators.videoDelivery, "equipos")} tone="purple" />
-                <MetricCard icon={UserMinus} label="Deserción registrada" value={formatRatio(indicators.dropout)} detail={ratioDetail(indicators.dropout, "estudiantes")} tone="yellow" />
-                <MetricCard icon={MessageSquareText} label="Respuesta del socio" value={formatRatio(indicators.partnerResponse)} detail={ratioDetail(indicators.partnerResponse, "revisiones")} tone="blue" />
-                <MetricCard icon={Star} label="Valoración del socio" value={formatRating(indicators.partnerRating)} detail={`${indicators.partnerRating.count} evaluaciones`} tone="green" />
-              </div>
-              <SchoolDistribution distribution={indicators.projectsBySchool} />
-            </section>
-          )}
+          {indicators && <IndicatorsPanel indicators={indicators} />}
           
           <MonitoringAlerts alerts={report.alerts} projects={report.projects} />
 
@@ -306,30 +285,3 @@ function formatDate(value) {
   return new Intl.DateTimeFormat("es-CL", { day: "2-digit", month: "short", year: "numeric", timeZone: "UTC" }).format(new Date(`${value}T00:00:00Z`));
 }
 
-function formatRatio(metric) {
-  return metric?.evaluable ? `${metric.percent} %` : "No evaluable";
-}
-
-function ratioDetail(metric, noun) {
-  return `${metric?.numerator ?? 0} de ${metric?.denominator ?? 0} ${noun}`;
-}
-
-function SchoolDistribution({ distribution }) {
-  return (
-    <Card className="monitoring-schools" aria-labelledby="monitoring-schools-title">
-      <h3 id="monitoring-schools-title">Proyectos por escuela</h3>
-      {distribution.total === 0 ? (
-        <p className="monitoring-schools__empty">No hay proyectos en este período.</p>
-      ) : distribution.schools.map((item) => (
-        <div key={item.school} className="monitoring-project__progress">
-          <div><span>{item.school}</span><small>{item.numerator} de {item.denominator} proyectos · {item.percent} %</small></div>
-          <div className="monitoring-progress" role="progressbar" aria-label={item.school} aria-valuemin="0" aria-valuemax="100" aria-valuenow={item.percent}><span style={{ width: `${item.percent}%` }} /></div>
-        </div>
-      ))}
-    </Card>
-  );
-}
-
-function formatRating(metric) {
-  return metric?.sufficient ? `${metric.average.toFixed(1).replace(".", ",")} / 5` : "Muestra insuficiente";
-}
