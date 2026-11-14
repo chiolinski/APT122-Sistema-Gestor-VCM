@@ -65,6 +65,33 @@ test("una entrega de alumnos pendiente no se sustituye por un video antiguo del 
   assert.deepEqual(result, { status: "pending", url: null });
 });
 
+test("un GUID de SQL en mayúsculas permite leer la entrega exacta sin autorizar otro equipo o sección", async () => {
+  const { getVideoCandidates } = await pathModule;
+  const { buildDeliveryBlobName } = require("../src/lib/videoUploads");
+  const id = "2815443E-F36B-1410-808F-00FC5569511F";
+  const attempt = "8D374249-04A4-4A75-98BC-6655F74230A0";
+  const folder = "concepcion/desarrollo-aplicaciones-moviles/001D";
+  const canonical = await buildDeliveryBlobName(context, id, attempt);
+  assert.equal(canonical, `${folder}/Entrega-${id.toLowerCase()}-${attempt.toLowerCase()}.mp4`);
+  for (const blobName of [canonical, `${folder}/Entrega-${id}-${attempt}.mp4`]) {
+    for (const teamId of [id, id.toLowerCase()]) {
+      const team = { id: teamId, name: "Equipo 1", videoBlobName: blobName };
+      assert.deepEqual(getVideoCandidates(context, team), [blobName]);
+      const queried = [];
+      const result = await resolvePartnerVideo(context, team, { config, storage: storageFor((name) => ({
+        getProperties: async () => { queried.push(name); return { contentType: "video/mp4", contentLength: 100 }; },
+      })) });
+      assert.deepEqual(queried, [blobName]);
+      assert.equal(result.status, "available");
+      assert.throws(() => getVideoCandidates({ ...context, sectionCode: "002D" }, team));
+      assert.throws(() => getVideoCandidates(context, { ...team, id: "2815443E-F36B-1410-808F-00FC5569511E" }));
+    }
+  }
+  for (const suffix of ["------------------------------------", "8d37424904a44a7598bc6655f74230a00000", `${attempt}/../otro`]) {
+    assert.throws(() => getVideoCandidates(context, { id, videoBlobName: `${folder}/Entrega-${id}-${suffix}.mp4` }));
+  }
+});
+
 test("codifica el espacio del video de prueba y rechaza destinos ajenos a Azure o rutas inválidas", async () => {
   const { buildVideoBlobUrl } = await pathModule;
   const path = "concepcion/desarrollo-aplicaciones-moviles/001D/Video VcM.mp4";

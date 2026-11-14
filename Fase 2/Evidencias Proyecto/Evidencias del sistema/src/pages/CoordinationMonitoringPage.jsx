@@ -5,20 +5,19 @@ import {
   ChevronDown,
   ChevronRight,
   CircleAlert,
-  Clock3,
   Download,
   Eye,
-  ListChecks,
   LoaderCircle,
   RefreshCw,
   School,
   Users,
 } from "lucide-react";
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { Link } from "react-router-dom";
-import IndicatorsPanel from "../components/IndicatorsPanel";
-import { Button, Card, EmptyState, MetricCard, PageHeader, SearchInput, Select } from "../components/UI";
-import { downloadCoordinationMonitoring, getCoordinationMonitoring, getIndicators } from "../services/coreApi";
+import { Button, EmptyState, PageHeader, SearchInput, Select } from "../components/UI";
+import MonitoringIndicators from "../components/MonitoringIndicators";
+import MonitoringCampusCharts from "../components/MonitoringCampusCharts";
+import { downloadCoordinationMonitoring, getCoordinationMonitoring } from "../services/coreApi";
 
 const FILTERS = [
   { id: "all", label: "Todos" },
@@ -29,32 +28,38 @@ const FILTERS = [
 
 export default function CoordinationMonitoringPage() {
   const [report, setReport] = useState(null);
-  const [indicators, setIndicators] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
   const [search, setSearch] = useState("");
   const [scope, setScope] = useState("all");
   const [campus, setCampus] = useState("all");
+  const [period, setPeriod] = useState("");
   const [expandedProjects, setExpandedProjects] = useState([]);
   const [exportMenuOpen, setExportMenuOpen] = useState(false);
   const [exporting, setExporting] = useState("");
   const [exportMessage, setExportMessage] = useState(null);
+  const [alertsVisible, setAlertsVisible] = useState(true);
+  const [refreshKey, setRefreshKey] = useState(0);
   const exportMenuRef = useRef(null);
+  const querySearch = search.trim();
 
-  const loadMonitoring = useCallback(async () => {
+  useEffect(() => {
+    const controller = new AbortController();
     setLoading(true);
     setError("");
-        getIndicators().then(setIndicators).catch(() => setIndicators(null));
-    try {
-      setReport(await getCoordinationMonitoring());
-    } catch (requestError) {
-      setError(requestError.message || "No fue posible cargar el seguimiento.");
-    } finally {
-      setLoading(false);
-    }
-  }, []);
-
-  useEffect(() => { loadMonitoring(); }, [loadMonitoring]);
+    setExportMenuOpen(false);
+    const timer = setTimeout(async () => {
+      try {
+        const next = await getCoordinationMonitoring({ scope, campus, search: querySearch, period }, { signal: controller.signal });
+        if (!controller.signal.aborted) setReport(next);
+      } catch (requestError) {
+        if (!controller.signal.aborted) setError(requestError.message || "No fue posible cargar el seguimiento.");
+      } finally {
+        if (!controller.signal.aborted) setLoading(false);
+      }
+    }, querySearch ? 250 : 0);
+    return () => { clearTimeout(timer); controller.abort(); };
+  }, [campus, period, scope, querySearch, refreshKey]);
 
   useEffect(() => {
     if (!exportMenuOpen) return undefined;
@@ -72,36 +77,24 @@ export default function CoordinationMonitoringPage() {
     };
   }, [exportMenuOpen]);
 
-  const campuses = useMemo(() => [...new Set((report?.projects || []).flatMap((project) => project.campuses))]
-    .sort((left, right) => left.localeCompare(right, "es")), [report]);
-
-  const filteredProjects = useMemo(() => {
-    const term = search.trim().toLocaleLowerCase("es");
-    return (report?.projects || []).filter((project) => {
-      if (scope === "attention" && project.attentionSections === 0) return false;
-      if (scope === "ready" && !project.readyForMilestoneTwo && !project.readyForClosure) return false;
-      if (scope === "finished" && project.progressPercent !== 100) return false;
-      if (campus !== "all" && !project.campuses.includes(campus)) return false;
-      if (!term) return true;
-      const searchable = [
-        project.id, project.name, project.subjectCode, project.subjectName,
-        ...project.campuses,
-        ...project.sections.flatMap((section) => [section.code, section.campusName, ...section.teachers.map((teacher) => teacher.name)]),
-      ].join(" ").toLocaleLowerCase("es");
-      return searchable.includes(term);
-    });
-  }, [campus, report, scope, search]);
+  const campuses = report?.availableCampuses || [];
+  const periods = report?.availablePeriods || [];
+  const matchesSelection = report?.filters?.scope === scope && report.filters.campus === campus
+    && report.filters.search === querySearch && (report.filters.period || "") === period;
+  const currentReport = matchesSelection ? report : null;
+  const filteredProjects = currentReport?.projects || [];
 
   const toggleProject = (projectId) => setExpandedProjects((current) => current.includes(projectId)
     ? current.filter((id) => id !== projectId)
     : [...current, projectId]);
 
   const handleExport = async (mode) => {
+    if (mode === "filtered" && (!currentReport || loading)) return;
     setExportMenuOpen(false);
     setExporting(mode);
     setExportMessage(null);
     try {
-      const filename = await downloadCoordinationMonitoring(mode === "filtered" ? { scope, campus, search } : {});
+      const filename = await downloadCoordinationMonitoring(mode === "filtered" ? currentReport.filters : {});
       setExportMessage({ tone: "success", text: `${filename} se descargó correctamente.` });
     } catch (exportError) {
       setExportMessage({ tone: "error", text: exportError.message || "No fue posible generar el archivo Excel." });
@@ -120,32 +113,51 @@ export default function CoordinationMonitoringPage() {
         description="Controla el avance por proyecto, sede, sección y docente, y actúa cuando una etapa esté lista o necesite atención."
         actions={<>
           <div className="monitoring-export" ref={exportMenuRef}>
-            <Button icon={exporting ? LoaderCircle : Download} disabled={Boolean(exporting)} aria-expanded={exportMenuOpen} aria-haspopup="menu" aria-controls="monitoring-export-menu" onClick={() => setExportMenuOpen((open) => !open)}>{exporting ? "Generando..." : "Descargar Excel"}</Button>
+            <Button icon={exporting ? LoaderCircle : Download} disabled={Boolean(exporting) || loading || !currentReport} aria-expanded={exportMenuOpen} aria-haspopup="menu" aria-controls="monitoring-export-menu" onClick={() => setExportMenuOpen((open) => !open)}>{exporting ? "Generando..." : "Descargar Excel"}</Button>
             {exportMenuOpen && (
               <div id="monitoring-export-menu" className="monitoring-export__menu" role="menu">
-                <button type="button" role="menuitem" disabled={!filteredProjects.length} onClick={() => handleExport("filtered")}><strong>Vista filtrada</strong><small>{filteredProjects.length} proyectos según los filtros actuales</small></button>
+                <button type="button" role="menuitem" disabled={loading || !currentReport || !filteredProjects.length} onClick={() => handleExport("filtered")}><strong>Vista filtrada</strong><small>{filteredProjects.length} proyectos según los filtros actuales</small></button>
                 <button type="button" role="menuitem" onClick={() => handleExport("complete")}><strong>Portafolio completo</strong><small>Todos los proyectos, secciones, docentes y alumnos</small></button>
               </div>
             )}
           </div>
-          <Button variant="secondary" icon={loading ? LoaderCircle : RefreshCw} disabled={loading} onClick={loadMonitoring}>{loading ? "Actualizando..." : "Actualizar"}</Button>
+          <Button variant="secondary" icon={loading ? LoaderCircle : RefreshCw} disabled={loading} onClick={() => setRefreshKey((value) => value + 1)}>{loading ? "Actualizando..." : "Actualizar"}</Button>
         </>}
       />
 
       {error && <div className="notice-banner notice-banner--error" role="alert"><AlertTriangle size={20} /><div><strong>Seguimiento no disponible</strong><p>{error}</p></div></div>}
       {exportMessage && <div className={`notice-banner notice-banner--${exportMessage.tone}`} role="status"><Download size={20} /><div><strong>Exportación del seguimiento</strong><p>{exportMessage.text}</p></div><button onClick={() => setExportMessage(null)}>×</button></div>}
 
-      {report && (
-        <>
-          <div className="metrics-grid monitoring-metrics">
-            <MetricCard icon={ListChecks} label="Proyectos" value={report.summary.projects} detail={`${report.summary.sections} secciones responsables`} />
-            <MetricCard icon={Clock3} label="Secciones pendientes" value={report.summary.pendingSections} detail={report.summary.overdueSections ? `${report.summary.overdueSections} atrasadas` : "Sin atrasos con fecha límite"} tone="blue" />
-            <MetricCard icon={Users} label="Seguimientos cerrados" value={`${report.summary.completedTeacherFollowUps}/${report.summary.teacherFollowUps}`} detail="Docente por proyecto" tone="green" />
-            <MetricCard icon={CalendarClock} label="Listos para avanzar" value={report.summary.readyProjects} detail="Requieren acción o supervisión" tone="purple" />
+      <section className="monitoring-filter-panel" aria-labelledby="monitoring-filters-title">
+        <div className="monitoring-toolbar">
+          <div><h2 id="monitoring-filters-title">Filtrar seguimiento</h2><p>La selección actualiza los indicadores, los gráficos, las alertas y los proyectos.</p></div>
+          <div className="monitoring-toolbar__controls">
+            <SearchInput value={search} onChange={(event) => setSearch(event.target.value.slice(0, 150))} placeholder="Proyecto, sección o docente" />
+            <Select value={campus} onChange={(event) => setCampus(event.target.value)} aria-label="Filtrar por sede">
+              <option value="all">Todas las sedes</option>
+              {campuses.map((name) => <option key={name} value={name}>{name}</option>)}
+            </Select>
+            <Select value={period} onChange={(event) => setPeriod(event.target.value)} aria-label="Filtrar por período académico">
+              <option value="">Todos los períodos</option>
+              {periods.map((code) => <option key={code} value={code}>{code}</option>)}
+            </Select>
           </div>
-          {indicators && <IndicatorsPanel indicators={indicators} />}
-          
-          <MonitoringAlerts alerts={report.alerts} projects={report.projects} />
+        </div>
+        <div className="monitoring-segments" role="tablist" aria-label="Estado del seguimiento">
+          {FILTERS.map((filter) => (
+            <button key={filter.id} type="button" role="tab" aria-selected={scope === filter.id} className={scope === filter.id ? "is-active" : ""} onClick={() => setScope(filter.id)}>{filter.label}</button>
+          ))}
+        </div>
+      </section>
+
+      {!currentReport && !error && <div className="monitoring-selection-loading" role="status">Actualizando seguimiento para la selección…</div>}
+      {currentReport && (
+        <>
+          <MonitoringIndicators indicators={currentReport.indicators} filters={currentReport.filters} generatedAt={currentReport.generatedAt} loading={loading} stale={Boolean(error)} />
+
+          <MonitoringCampusCharts campuses={currentReport.campusComparisons} loading={loading} stale={Boolean(error)} />
+
+          <MonitoringAlerts alerts={currentReport.alerts} projects={currentReport.projects} expanded={alertsVisible} onToggle={() => setAlertsVisible((visible) => !visible)} />
 
           <section className="monitoring-workspace" aria-labelledby="monitoring-projects-title">
             <div className="monitoring-toolbar">
@@ -153,21 +165,7 @@ export default function CoordinationMonitoringPage() {
                 <p className="eyebrow">Portafolio 2026</p>
                 <h2 id="monitoring-projects-title">Avance por proyecto</h2>
               </div>
-              <div className="monitoring-toolbar__controls">
-                <SearchInput value={search} onChange={(event) => setSearch(event.target.value)} placeholder="Proyecto, sección o docente" />
-                <Select value={campus} onChange={(event) => setCampus(event.target.value)} aria-label="Filtrar por sede">
-                  <option value="all">Todas las sedes</option>
-                  {campuses.map((name) => <option key={name} value={name}>{name}</option>)}
-                </Select>
-              </div>
-            </div>
-
-            <div className="monitoring-segments" role="tablist" aria-label="Estado del seguimiento">
-              {FILTERS.map((filter) => (
-                <button key={filter.id} type="button" role="tab" aria-selected={scope === filter.id} className={scope === filter.id ? "is-active" : ""} onClick={() => setScope(filter.id)}>
-                  {filter.label}
-                </button>
-              ))}
+              <span className="monitoring-project-count">{filteredProjects.length} proyectos en esta selección</span>
             </div>
 
             <div className="monitoring-project-list">
@@ -175,7 +173,7 @@ export default function CoordinationMonitoringPage() {
                 <MonitoringProject key={project.id} project={project} expanded={expandedProjects.includes(project.id)} onToggle={() => toggleProject(project.id)} />
               ))}
             </div>
-            {!filteredProjects.length && <EmptyState title="No hay proyectos para estos filtros" description="Prueba otra sede, estado o término de búsqueda." />}
+            {!filteredProjects.length && <EmptyState title="No hay proyectos para estos filtros" description="Cambia los filtros o prueba otro término de búsqueda." />}
           </section>
         </>
       )}
@@ -183,20 +181,17 @@ export default function CoordinationMonitoringPage() {
   );
 }
 
-function MonitoringAlerts({ alerts, projects }) {
-  if (!alerts.length) return (
-    <section className="monitoring-alerts monitoring-alerts--clear">
-      <CheckCircle2 size={22} />
-      <div><strong>Sin alertas operativas</strong><p>No hay proyectos atrasados ni etapas esperando una acción de coordinación.</p></div>
-    </section>
-  );
+function MonitoringAlerts({ alerts, projects, expanded, onToggle }) {
   return (
     <section className="monitoring-alerts" aria-labelledby="monitoring-alerts-title">
       <div className="monitoring-alerts__heading">
         <div><p className="eyebrow">Atención</p><h2 id="monitoring-alerts-title">Alertas de seguimiento</h2></div>
-        <span>{alerts.length}</span>
+        <div className="monitoring-alerts__controls"><span aria-label={`${alerts.length} alertas`}>{alerts.length}</span>
+          <Button variant="secondary" icon={expanded ? ChevronDown : ChevronRight} aria-expanded={expanded} aria-controls="monitoring-alerts-content" onClick={onToggle}>{expanded ? "Ocultar alertas" : "Mostrar alertas"}</Button>
+        </div>
       </div>
-      <div className="monitoring-alert-list">
+      <div id="monitoring-alerts-content" hidden={!expanded}>
+      {expanded && (!alerts.length ? <div className="monitoring-alerts__empty"><CheckCircle2 size={22} aria-hidden="true" /><div><strong>Sin alertas operativas</strong><p>No hay alertas pendientes para esta selección.</p></div></div> : <div className="monitoring-alert-list">
         {alerts.map((alert) => {
           const project = projects.find((item) => item.id === alert.projectId);
           const targetSection = alert.type === "OVERDUE_SECTIONS"
@@ -211,6 +206,7 @@ function MonitoringAlerts({ alerts, projects }) {
             </article>
           );
         })}
+      </div>)}
       </div>
     </section>
   );
@@ -284,4 +280,3 @@ function formatDate(value) {
   if (!value) return "Sin fecha";
   return new Intl.DateTimeFormat("es-CL", { day: "2-digit", month: "short", year: "numeric", timeZone: "UTC" }).format(new Date(`${value}T00:00:00Z`));
 }
-

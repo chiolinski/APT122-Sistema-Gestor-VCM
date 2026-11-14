@@ -8,7 +8,7 @@ async function buildDeliveryBlobName(context, teamId, attemptId) {
   const { getSectionVideoFolder } = await import("../shared/partnerVideoPaths.mjs");
   const folder = getSectionVideoFolder(context);
   if (!folder) throw new AppError(409, "VIDEO_UPLOAD_FOLDER", "Coordinación debe revisar los datos de la sección.");
-  return `${folder}/Entrega-${teamId}-${attemptId}.mp4`;
+  return `${folder}/Entrega-${String(teamId).toLowerCase()}-${String(attemptId).toLowerCase()}.mp4`;
 }
 function validateVideoUpload(input = {}) {
   const name = typeof input?.name === "string" ? input.name.trim() : "";

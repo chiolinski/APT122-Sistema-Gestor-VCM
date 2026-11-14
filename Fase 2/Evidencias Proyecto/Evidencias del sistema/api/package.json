@@ -12,13 +12,15 @@
     "test": "node --test test/*.test.js",
     "test:integration": "node --test --test-concurrency=1 integration/*.test.js",
     "db:migrate": "node scripts/migrate.js",
-    "seed:local": "node scripts/seed-local.js"
+    "seed:local": "node scripts/seed-local.js",
+    "seed:showcase": "node scripts/seed-showcase.js"
   },
   "dependencies": {
     "@azure/functions": "^4.7.2",
     "@azure/storage-blob": "12.29.1",
     "dotenv": "^17.2.3",
     "exceljs": "4.4.0",
+    "jszip": "3.10.1",
     "mssql": "^12.2.0"
   },
   "overrides": {

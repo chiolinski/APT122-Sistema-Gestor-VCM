@@ -1,4 +1,5 @@
 const { AppError } = require("./http");
+const { buildMonitoringIndicators, buildCampusComparisons } = require("./monitoringIndicators");
 
 const STATUS_LABELS = {
   PLANIFICADO: "Planificado",
@@ -46,10 +47,15 @@ function normalizeMonitoringFilters(input = {}) {
   if (!MONITORING_SCOPES.has(scope)) {
     throw new AppError(400, "INVALID_MONITORING_SCOPE", "El filtro de seguimiento no es válido.");
   }
+  const period = String(input.period || "").trim().toUpperCase();
+  if (period.length > 20) {
+    throw new AppError(400, "INVALID_PERIOD", "El período académico indicado no es válido.");
+  }
   return {
     scope,
     campus: String(input.campus || "all").trim().slice(0, 150) || "all",
     search: String(input.search || "").trim().slice(0, 150),
+    period,
   };
 }
 
@@ -74,6 +80,8 @@ function filterMonitoringReport(report, input = {}) {
     if (filters.scope === "ready" && !project.readyForMilestoneTwo && !project.readyForClosure) return false;
     if (filters.scope === "finished" && project.progressPercent !== 100) return false;
     if (filters.campus !== "all" && !project.campuses.includes(filters.campus)) return false;
+    if (filters.period && !project.sections.some((section) => section.periodCode === filters.period
+      && (filters.campus === "all" || section.campusName === filters.campus))) return false;
     if (!term) return true;
     const searchable = [
       project.id, project.name, project.subjectCode, project.subjectName,
@@ -86,8 +94,10 @@ function filterMonitoringReport(report, input = {}) {
     return searchable.includes(term);
   });
   const projectIds = new Set(projects.map((project) => project.id));
+  // Los indicadores se recalculan con las filas originales tras aplicar filtros.
+  const { indicators: _indicators, campusComparisons: _campusComparisons, ...baseReport } = report;
   return {
-    ...report,
+    ...baseReport,
     filters,
     summary: summarizeProjects(projects),
     alerts: (report.alerts || []).filter((alert) => projectIds.has(alert.projectId)),
@@ -95,7 +105,7 @@ function filterMonitoringReport(report, input = {}) {
   };
 }
 
-function buildCoordinationMonitoring({ projectRows = [], sectionRows = [], teacherRows = [] }, currentDate = currentDateInChile()) {
+function buildCoordinationMonitoring({ projectRows = [], sectionRows = [], teacherRows = [], studentRows = [], reviewRows = [] }, currentDate = currentDateInChile(), filters = {}) {
   const sectionsByProject = groupBy(sectionRows, (row) => row.projectId);
   const teachersBySection = groupBy(teacherRows, (row) => `${row.projectId}:${row.sectionId}`);
 
@@ -127,6 +137,7 @@ function buildCoordinationMonitoring({ projectRows = [], sectionRows = [], teach
         code: sectionRow.code,
         shift: sectionRow.shift || null,
         campusName: sectionRow.campusName,
+        periodCode: sectionRow.periodCode?.toUpperCase() || null,
         studentCount: Number(sectionRow.studentCount || 0),
         teamCount: Number(sectionRow.teamCount || 0),
         assignedStudentCount: Number(sectionRow.assignedStudentCount || 0),
@@ -161,7 +172,7 @@ function buildCoordinationMonitoring({ projectRows = [], sectionRows = [], teach
       };
     }).sort((left, right) => left.name.localeCompare(right.name, "es"));
 
-    const completedByMilestone = [1, 2, 3].map((number) => sections.filter((section) => section.completedMilestones >= number).length);
+    const completedByMilestone = [1, 2, 3].map((number) => sections.filter((section) => section.milestones[number - 1].status === "Completado").length);
     const totalMilestones = sections.length * 3;
     const completedMilestones = sections.reduce((total, section) => total + section.completedMilestones, 0);
     const readyForMilestoneTwo = sections.length > 0 && completedByMilestone[0] === sections.length && !availableFrom;
@@ -170,10 +181,12 @@ function buildCoordinationMonitoring({ projectRows = [], sectionRows = [], teach
     return {
       id: projectRow.id,
       databaseId: projectRow.databaseId,
+      partnerId: projectRow.partnerId || null,
       name: projectRow.name,
       status: STATUS_LABELS[projectRow.status] || projectRow.status,
       subjectCode: projectRow.subjectCode,
       subjectName: projectRow.subjectName,
+      schoolName: projectRow.schoolName || null,
       startDate: projectRow.startDate || null,
       endDate: projectRow.endDate || null,
       availableFrom,
@@ -228,12 +241,20 @@ function buildCoordinationMonitoring({ projectRows = [], sectionRows = [], teach
   });
   alerts.sort((left, right) => PRIORITY_ORDER[left.priority] - PRIORITY_ORDER[right.priority] || left.title.localeCompare(right.title, "es"));
 
-  return {
+  const report = filterMonitoringReport({
     generatedAt: new Date().toISOString(),
     currentDate,
+    availableCampuses: [...new Set(projects.flatMap((project) => project.campuses))].sort((a, b) => a.localeCompare(b, "es")),
+    availablePeriods: [...new Set(projects.flatMap((project) => project.sections.map((section) => section.periodCode)).filter(Boolean))]
+      .sort((a, b) => b.localeCompare(a, "es", { numeric: true })),
     summary: summarizeProjects(projects),
     alerts,
     projects,
+  }, filters);
+  return {
+    ...report,
+    indicators: buildMonitoringIndicators(report.projects, studentRows, reviewRows),
+    campusComparisons: buildCampusComparisons(report.projects, studentRows, report.filters.campus, report.filters.period),
   };
 }
 

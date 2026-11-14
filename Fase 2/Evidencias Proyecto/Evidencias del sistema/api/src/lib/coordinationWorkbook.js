@@ -1,4 +1,5 @@
 const ExcelJS = require("exceljs");
+const { addCampusComparisonSheet, attachCampusCharts } = require("./monitoringCampusWorkbook");
 
 const COLORS = {
   ink: "FF171717",
@@ -12,6 +13,10 @@ function formatDate(value) {
 
 function yesNo(value) {
   return value ? "Sí" : "No";
+}
+
+function fraction(metric) {
+  return metric.denominator ? `${metric.numerator} de ${metric.denominator}` : "Sin datos";
 }
 
 function addWorksheet(workbook, name, columns, rows) {
@@ -264,6 +269,64 @@ function createCoordinationWorkbook({ report, students, partners = [] }) {
     message: alert.message,
   })));
 
+  if (report.indicators) {
+    const data = report.indicators;
+    const indicators = [
+      ["Proyectos considerados", data.projectCount, "Proyectos seleccionados, excluyendo cancelados."],
+      ["Estudiantes en nómina", data.enrolledStudents, "Estudiantes únicos activos con matrícula vigente en secciones responsables."],
+      ["Estudiantes participantes", data.participatingStudents, "Estudiantes únicos con matrícula vigente y equipo asignado."],
+      ["Participación estudiantil (%)", data.studentParticipationPercent, "Participantes / estudiantes en nómina."],
+      ["Equipos conformados", data.formedTeams, "Equipos con estudiantes vigentes asignados."],
+      ["Docentes participantes", data.participatingTeachers, "Docentes únicos con secciones responsables."],
+      ["Socios formadores vinculados", data.linkedPartners, "Socios únicos de los proyectos seleccionados."],
+      ...data.milestones.map((milestone) => [milestone.number === 3 ? "Proyectos finalizados" : `Proyectos con Hito ${milestone.number} terminado`,
+        milestone.completedProjects, `Todas las secciones completas; base: ${milestone.totalProjects} proyectos. El Hito 3 exige también estado finalizado.`]),
+      ["Avance de hitos por sección (%)", data.sectionProgressPercent, `${data.completedSectionMilestones} de ${data.totalSectionMilestones} hitos completados.`],
+      ["Secciones cerradas", data.completedSections, `Los tres hitos completos; base: ${data.totalSections} secciones.`],
+      ["Socios con revisión publicada", data.partnersInvited, "Socios únicos con revisión vigente o registrada en el cierre del Hito 2."],
+      ["Socios que respondieron al Hito 2", data.respondingPartners, "Socios únicos con al menos una evaluación válida, incluyendo respuestas parciales y vencidas."],
+      ["Respuesta de socios (%)", data.partnerResponsePercent, "Socios que respondieron / socios con revisión publicada."],
+      ["Revisiones con respuestas", data.answeredReviewCount, `Al menos una evaluación; base: ${data.reviewCount} revisiones.`],
+      ["Evaluaciones de equipos", data.ratingCount, "Evaluaciones únicas en las revisiones consideradas."],
+      ["Proyectos valorados", data.ratedProjects, "Proyectos con al menos una evaluación válida."],
+      ["Valoración promedio de proyectos", data.averageProjectRating ?? "Sin evaluaciones", "Escala 1 a 5. Promedio de promedios por proyecto, con igual peso para cada proyecto."],
+    ];
+    if (data.videoDelivery) {
+      indicators.push(
+        ["Período académico", report.filters?.period || "Todos los períodos", "Selecciona proyectos con secciones del período y conserva todas sus secciones para indicadores globales."],
+        ["Equipos con video entregado (%)", data.videoDelivery.percent ?? "Sin datos", `${fraction(data.videoDelivery)} equipos con entrega confirmada en proyectos en ejecución o finalizados.`],
+        ["Deserción por proyecto (%)", data.dropout.percent ?? "Sin datos", `${fraction(data.dropout)} matrículas por proyecto con deserción, en proyectos en ejecución o finalizados.`],
+        ["Proyectos con todos los videos", data.projectsWithAllVideos.numerator, `${fraction(data.projectsWithAllVideos)} proyectos con equipos conformados.`],
+        ["Proyectos con deserción", data.projectsWithDropout.numerator, `${fraction(data.projectsWithDropout)} proyectos en ejecución o finalizados con matrícula vigente.`],
+      );
+      const schools = addWorksheet(workbook, "Proyectos por escuela", [
+        { key: "school", header: "Escuela", width: 42 },
+        { key: "projects", header: "Proyectos", width: 14 },
+        { key: "percentage", header: "Proporción de la selección", width: 22 },
+      ], data.projectsBySchool.map((row) => ({ school: row.school, projects: row.numerator, percentage: row.percent / 100 })));
+      schools.getColumn("percentage").numFmt = "0.#%";
+      addWorksheet(workbook, "Indicadores por proyecto", [
+        { key: "code", header: "Código proyecto" }, { key: "name", header: "Proyecto", width: 34 },
+        { key: "school", header: "Escuela", width: 30 }, { key: "participation", header: "En equipo" },
+        { key: "hito1", header: "Secciones con Hito 1" }, { key: "hito2", header: "Secciones con Hito 2" },
+        { key: "closure", header: "Secciones cerradas" }, { key: "videos", header: "Equipos con video" },
+        { key: "dropout", header: "Deserción" }, { key: "response", header: "Revisiones completadas por el socio", width: 26 },
+        { key: "rating", header: "Valoración (1 a 5)" }, { key: "evaluations", header: "Evaluaciones" },
+      ], data.projectDetails.map((row) => ({
+        code: row.code, name: row.name, school: row.school, participation: fraction(row.participation),
+        hito1: fraction(row.milestones[0]), hito2: fraction(row.milestones[1]), closure: fraction(row.milestones[2]),
+        videos: fraction(row.videoDelivery), dropout: fraction(row.dropout), response: fraction(row.partnerResponse),
+        rating: row.partnerRating ?? "Menos de 3 evaluaciones", evaluations: row.evaluationCount,
+      })));
+    }
+    addWorksheet(workbook, "Indicadores", [
+      { key: "indicator", header: "Indicador", width: 40 },
+      { key: "value", header: "Valor", width: 18 },
+      { key: "definition", header: "Criterio y base de cálculo", width: 105 },
+    ], indicators.map(([indicator, value, definition]) => ({ indicator, value, definition })));
+    workbook.getWorksheet("Indicadores").getColumn("value").numFmt = "0.##";
+  }
+
   const summarySheet = workbook.getWorksheet("Resumen proyectos");
   summarySheet.getColumn("progress").numFmt = "0\"%\"";
   ["hito1", "hito2", "hito3"].forEach((key) => {
@@ -275,7 +338,8 @@ function createCoordinationWorkbook({ report, students, partners = [] }) {
 
 async function writeCoordinationWorkbook(data) {
   const workbook = createCoordinationWorkbook(data);
-  return Buffer.from(await workbook.xlsx.writeBuffer());
+  const charts = addCampusComparisonSheet(workbook, data.report);
+  return attachCampusCharts(await workbook.xlsx.writeBuffer(), charts);
 }
 
 module.exports = { createCoordinationWorkbook, writeCoordinationWorkbook };
