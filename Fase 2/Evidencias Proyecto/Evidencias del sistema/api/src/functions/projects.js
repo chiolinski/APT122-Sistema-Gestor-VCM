@@ -38,7 +38,10 @@ app.http("coordinationProjectMonitoring", {
   handler: async (request, context) => {
     try {
       assertMonitoringAccess(await requireUser(request));
-      return ok(await listCoordinationMonitoring());
+      const query = new URL(request.url).searchParams;
+      return ok(await listCoordinationMonitoring({
+        scope: query.get("scope"), campus: query.get("campus"), search: query.get("search"), period: query.get("period"),
+      }));
     } catch (error) { return handleError(error, context); }
   },
 });
@@ -53,6 +56,7 @@ app.http("exportCoordinationProjectMonitoring", {
         scope: url.searchParams.get("scope"),
         campus: url.searchParams.get("campus"),
         search: url.searchParams.get("search"),
+        period: url.searchParams.get("period"),
       });
       const body = await writeCoordinationWorkbook(data);
       const partnerCount = new Set((data.partners || []).map((partner) => partner.id)).size;
