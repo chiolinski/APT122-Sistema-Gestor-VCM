@@ -1,0 +1,56 @@
+.indicators-panel { display: grid; grid-template-columns: minmax(0, 1fr); gap: 24px; margin-bottom: 20px; padding: 22px 24px; }
+.indicators-panel__header { display: flex; align-items: flex-end; justify-content: space-between; flex-wrap: wrap; gap: 8px 20px; }
+.indicators-panel__header h2 { margin: 0; font-size: 20px; letter-spacing: -.025em; }
+.indicators-panel__header > span { color: var(--muted); font-size: 12px; }
+.indicators-panel__block h3 { display: flex; align-items: center; gap: 7px; margin: 0 0 11px; font-size: 14px; }
+.indicators-panel__block h3 svg { color: #9b6e00; }
+.indicators-panel__block h3 > span { color: #999; font-size: 11px; font-weight: 600; }
+.indicators-panel__empty { margin: 0; color: #777; font-size: 12px; }
+.indicators-panel__columns { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 20px; }
+.indicators-panel__columns > section { display: flex; flex-direction: column; }
+
+.indicators-steps { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 12px; }
+.indicators-step, .indicators-box { padding: 14px 16px; border-radius: 12px; background: var(--soft); }
+.indicators-step small, .indicators-partner small { display: block; margin-bottom: 4px; color: #777; font-size: 10px; font-weight: 850; letter-spacing: .08em; text-transform: uppercase; }
+.indicators-step p, .indicators-partner p { margin: 0; color: var(--muted); font-size: 11px; }
+.indicators-box { display: grid; flex: 1; align-content: start; gap: 18px; }
+
+.indicators-count { display: flex; align-items: baseline; flex-wrap: wrap; gap: 6px; font-size: 24px; line-height: 1.15; }
+.indicators-count > span { color: var(--muted); font-size: 12px; font-weight: 600; }
+.indicators-count.is-empty { color: #999; font-size: 15px; }
+.indicators-stars { display: inline-flex; gap: 2px; align-self: center; }
+.indicators-stars svg { color: #d6d6d2; }
+.indicators-stars svg.is-filled { color: var(--yellow); fill: var(--yellow); }
+
+.indicators-progress { height: 8px; margin: 8px 0 6px; overflow: hidden; border-radius: 999px; background: #e9e9e6; }
+.indicators-box .indicators-progress, .indicators-schools .indicators-progress { background: #fff; }
+.indicators-progress > span { display: block; height: 100%; border-radius: inherit; background: #2a8b69; }
+.indicators-progress--warning > span { background: var(--yellow); }
+.indicators-progress--school > span { background: #684c92; }
+
+.indicators-row__label { display: flex; align-items: baseline; justify-content: space-between; gap: 10px; font-size: 12px; }
+.indicators-row__label span { font-weight: 700; }
+.indicators-row__label strong { white-space: nowrap; }
+.indicators-row--warning .indicators-row__label strong { color: #8d6a00; }
+.indicators-row small { color: var(--muted); font-size: 11px; }
+
+.indicators-table { overflow-x: auto; border: 1px solid var(--line); border-radius: 12px; }
+.indicators-table table { width: 100%; min-width: 760px; border-collapse: collapse; font-size: 12px; }
+.indicators-table th { padding: 10px 12px; color: #777; background: var(--soft); font-size: 10px; font-weight: 850; letter-spacing: .06em; text-align: left; text-transform: uppercase; white-space: nowrap; }
+.indicators-table td { padding: 11px 12px; border-top: 1px solid var(--line); white-space: nowrap; }
+.indicators-table td:first-child { white-space: normal; }
+.indicators-table td strong, .indicators-table td small { display: block; }
+.indicators-table td small { margin-top: 3px; color: #888; font-size: 10px; }
+.indicators-table td.is-complete { color: #147255; font-weight: 800; }
+.indicators-table td.is-empty { color: #aaa; }
+
+.indicators-schools { display: grid; gap: 10px; padding: 14px 16px; border-radius: 12px; background: var(--soft); }
+.indicators-panel__help { padding-top: 14px; border-top: 1px solid var(--line); font-size: 12px; }
+.indicators-panel__help summary { color: #555; font-weight: 700; cursor: pointer; }
+.indicators-panel__help ul { display: grid; gap: 6px; margin: 12px 0 0; padding-left: 18px; color: var(--muted); line-height: 1.5; }
+
+@media (max-width: 900px) { .indicators-panel__columns { grid-template-columns: 1fr; } }
+@media (max-width: 640px) {
+  .indicators-panel { padding: 18px; }
+  .indicators-steps { grid-template-columns: 1fr; }
+}

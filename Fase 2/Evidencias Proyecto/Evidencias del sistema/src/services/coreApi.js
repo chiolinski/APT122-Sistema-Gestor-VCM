@@ -38,6 +38,10 @@ export function getCoordinationMonitoring(filters = {}, { signal } = {}) {
   return apiRequest(`projects/monitoring${monitoringQuery(filters)}`, { signal });
 }
 
+export function getIndicators(period) {
+  return apiRequest(`indicators${period ? `?period=${encodeURIComponent(period)}` : ""}`);
+}
+
 export async function downloadCoordinationMonitoring(filters = {}) {
   const response = await fetch(`/api/projects/monitoring/export${monitoringQuery(filters)}`, {
     headers: { Accept: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet" },
