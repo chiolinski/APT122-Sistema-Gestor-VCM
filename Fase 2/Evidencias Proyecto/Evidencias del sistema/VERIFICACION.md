@@ -151,3 +151,5 @@ Administración y coordinación tuvieron acceso. Seguimiento y exportación devo
 Con SQL, Azurite y la API local iniciados, se probó una copia de `state.json` marcada como incompleta y sin el paso de un antecedente ya guardado. La copia incluía un `running.lock` residual de la versión anterior. El ejecutor llegó a la descarga del antecedente mientras mantenía el bloqueo SQL, rechazó una segunda carga simultánea y se detuvo por cierre forzado. El siguiente intento recuperó el mismo identificador de archivo y completó la verificación de los 80 proyectos.
 
 Se conservaron los 260 registros de archivos, los 260 blobs de documentos y el estado original. Otra ejecución reconoció la carga completada. `npm run local:verify` aprobó aislamiento, lint, 56 pruebas frontend, 250 pruebas API y compilación.
+
+Al incorporar los cambios del PR #2, se verificaron la pantalla y las exportaciones de Seguimiento junto con la API de indicadores. Pasaron 58 pruebas de frontend, 262 de API y las 8 de `npm run test:integration`. La prueba de cierre forzado de DEMO26 volvió a recuperar el mismo antecedente y conservó los 260 registros y blobs.
