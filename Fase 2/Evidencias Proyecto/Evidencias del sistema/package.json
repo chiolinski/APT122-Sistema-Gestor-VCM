@@ -13,6 +13,7 @@
     "local:infra": "docker compose up -d",
     "local:stop": "docker compose stop",
     "local:setup": "node scripts/local-setup.cjs",
+    "local:demo": "npm --prefix api run seed:showcase",
     "local:api": "npm --prefix api start",
     "test:api": "npm --prefix api test",
     "test:isolation": "node --test api/test/localIsolation.test.js",

@@ -24,17 +24,22 @@ export function listProjects() {
   return apiRequest("projects");
 }
 
-export function getCoordinationMonitoring() {
-  return apiRequest("projects/monitoring");
-}
-
-export async function downloadCoordinationMonitoring(filters = {}) {
+function monitoringQuery(filters) {
   const params = new URLSearchParams();
   if (filters.scope && filters.scope !== "all") params.set("scope", filters.scope);
   if (filters.campus && filters.campus !== "all") params.set("campus", filters.campus);
   if (filters.search?.trim()) params.set("search", filters.search.trim());
+  if (filters.period?.trim()) params.set("period", filters.period.trim());
   const query = params.toString();
-  const response = await fetch(`/api/projects/monitoring/export${query ? `?${query}` : ""}`, {
+  return query ? `?${query}` : "";
+}
+
+export function getCoordinationMonitoring(filters = {}, { signal } = {}) {
+  return apiRequest(`projects/monitoring${monitoringQuery(filters)}`, { signal });
+}
+
+export async function downloadCoordinationMonitoring(filters = {}) {
+  const response = await fetch(`/api/projects/monitoring/export${monitoringQuery(filters)}`, {
     headers: { Accept: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet" },
   });
   if (!response.ok) {

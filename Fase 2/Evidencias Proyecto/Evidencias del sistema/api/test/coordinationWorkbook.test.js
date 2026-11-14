@@ -51,6 +51,7 @@ test("genera un libro Excel con las hojas operativas y los socios formadores", a
   await workbook.xlsx.load(buffer);
   assert.deepEqual(workbook.worksheets.map((sheet) => sheet.name), [
     "Resumen proyectos", "Socios formadores", "Secciones", "Docentes", "Alumnos", "Alertas",
+    "Proyectos por escuela", "Indicadores por proyecto", "Indicadores", "Comparación por sede",
   ]);
   assert.equal(workbook.getWorksheet("Resumen proyectos").rowCount, 2);
   const partnerSheet = workbook.getWorksheet("Socios formadores");
@@ -69,4 +70,12 @@ test("genera un libro Excel con las hojas operativas y los socios formadores", a
   assert.equal(workbook.getWorksheet("Alumnos").getCell("M2").value, "Asignado");
   assert.equal(workbook.getWorksheet("Alumnos").getCell("N2").value, "Hito 1 completo");
   assert.equal(workbook.getWorksheet("Alertas").rowCount, 2);
+  const indicators = workbook.getWorksheet("Indicadores");
+  const values = new Map(indicators.getRows(2, indicators.rowCount - 1).map((row) => [row.getCell(1).value, row.getCell(2).value]));
+  assert.equal(values.get("Proyectos con Hito 1 terminado"), 1);
+  assert.equal(values.get("Proyectos con Hito 2 terminado"), 0);
+  assert.equal(values.get("Valoración promedio de proyectos"), "Sin evaluaciones");
+  assert.equal(values.get("Equipos con video entregado (%)"), "Sin datos");
+  assert.equal(workbook.getWorksheet("Proyectos por escuela").getCell("B2").value, 1);
+  assert.equal(workbook.getWorksheet("Indicadores por proyecto").getCell("E2").value, "1 de 1");
 });

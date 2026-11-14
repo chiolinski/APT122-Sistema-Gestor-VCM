@@ -27,9 +27,12 @@ export function getSectionVideoFolder(context) {
 export function getVideoCandidates(context, team) {
   const folder = getSectionVideoFolder(context);
   if (folder && team?.videoBlobName) {
-    const prefix = `${folder}/Entrega-${String(team.id).toLowerCase()}-`;
-    const suffix = team.videoBlobName.slice(prefix.length);
-    if (!team.videoBlobName.startsWith(prefix) || !/^[a-f0-9-]{36}\.mp4$/.test(suffix)) throw new Error("Invalid delivered video path");
+    const prefix = `${folder}/Entrega-`;
+    // SQL Server puede devolver GUID en mayúsculas; Blob Storage distingue el
+    // nombre exacto. Se compara la identidad sin cambiar la ruta ya confirmada.
+    const delivery = team.videoBlobName.startsWith(prefix) && team.videoBlobName.slice(prefix.length)
+      .match(/^([a-f0-9]{8}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{12})-([a-f0-9]{8}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{12})\.mp4$/i);
+    if (!delivery || delivery[1].toLowerCase() !== String(team.id).toLowerCase()) throw new Error("Invalid delivered video path");
     return [team.videoBlobName];
   }
   const number = getVideoTeamNumber(team);

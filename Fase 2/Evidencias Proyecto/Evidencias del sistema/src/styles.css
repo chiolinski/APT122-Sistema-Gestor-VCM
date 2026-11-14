@@ -675,7 +675,7 @@ td small { color: #929292; font-size: 10px; }
 .monitoring-workspace { margin-top: 25px; }
 .monitoring-toolbar { display: flex; align-items: flex-end; justify-content: space-between; gap: 20px; margin-bottom: 14px; }
 .monitoring-toolbar h2 { margin: 0; font-size: 22px; }
-.monitoring-toolbar__controls { display: flex; align-items: center; gap: 9px; }
+.monitoring-toolbar__controls { display: flex; flex-wrap: wrap; align-items: center; gap: 9px; }
 .monitoring-toolbar__controls .control { width: 210px; }
 .monitoring-segments { display: inline-flex; align-items: center; gap: 3px; max-width: 100%; margin-bottom: 14px; padding: 4px; overflow-x: auto; border: 1px solid #e6e6e2; border-radius: 10px; background: #f1f1ee; scrollbar-width: none; }
 .monitoring-segments::-webkit-scrollbar { display: none; }

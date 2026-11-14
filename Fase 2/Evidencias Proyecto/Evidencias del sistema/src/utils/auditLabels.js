@@ -1,4 +1,5 @@
 const ACTION_LABELS = {
+  LOCAL_SHOWCASE_REVIEW_EXPIRED: "Vencimiento simulado de revisión local",
   ACADEMIC_ADJUSTMENT: "Ajuste académico aplicado",
   ACADEMIC_IMPORT_APPLIED: "Carga académica aplicada",
   ACADEMIC_RECORD_UPDATED: "Registro académico actualizado",
