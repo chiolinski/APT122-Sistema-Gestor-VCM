@@ -35,7 +35,7 @@ async function step(key, operation) {
   return state.steps[key];
 }
 
-async function api(route, { cookie, token, body, method = "GET", raw, filename } = {}) {
+async function api(route, { cookie, token, body, method = "GET", raw, filename, download = false } = {}) {
   assert.ok(route.startsWith("/api/") && !route.includes("#"));
   const response = await fetch(BASE + route, { method, redirect: "error", signal: AbortSignal.timeout(120_000),
     headers: { Accept: "application/json", ...(cookie ? { Cookie: cookie } : {}),
@@ -44,6 +44,7 @@ async function api(route, { cookie, token, body, method = "GET", raw, filename }
         : body ? { "Content-Type": "application/json" } : {}) },
     ...(raw ? { body: raw } : body ? { body: JSON.stringify(body) } : {}),
   });
+  if (download && response.ok) return { data: Buffer.from(await response.arrayBuffer()) };
   const payload = await response.json().catch(() => ({}));
   if (!response.ok) throw new Error(`${method} ${route}: ${response.status} ${payload.error?.code || ""} ${payload.error?.message || "Fallo de la API local"}`);
   return { data: payload.data, cookie: response.headers.get("set-cookie")?.split(";")[0], payload };
@@ -144,13 +145,24 @@ function generateVideo() {
   return fs.readFileSync(file);
 }
 
-async function uploadDocument(project, sectionId, cookie) {
+async function uploadDocument(project, sectionId, { cookie, principal }) {
   const category = sectionId ? "ENTREGABLE_HITO_2" : "ANTECEDENTE";
   const key = `${project.key}/file/${sectionId || "antecedente"}`;
   return step(key, async () => {
     const query = new URLSearchParams({ category, ...(sectionId ? { sectionId } : {}) });
     const filename = `${project.key}-${sectionId ? "informe-ficticio" : "propuesta-ficticia"}.txt`;
     const raw = Buffer.from(`DATOS COMPLETAMENTE FICTICIOS - VCM LOCAL\n${project.name}\n${project.description}\n${project.expectedResult}\nContacto de prueba: ${project.partnerEmail}\nDocumento demostrativo sin personas ni instituciones reales.\n`, "utf8");
+    if (!sectionId) {
+      const current = (await api("/api/projects", { cookie })).data
+        .find((row) => row.id === project.id && row.databaseId === project.databaseId);
+      assert.ok(current, `No se encontró el proyecto ficticio ${project.key}.`);
+      for (const file of current.attachments) {
+        if (file.name !== filename || file.size !== raw.length
+          || String(file.uploadedBy).toLowerCase() !== String(principal.id).toLowerCase()) continue;
+        const { data } = await api(`/api/projects/${project.id}/files/${file.id}`, { cookie, download: true });
+        if (raw.equals(data)) return { id: file.id, name: file.name, sectionId };
+      }
+    }
     const result = await api(`/api/projects/${project.id}/files?${query}`, { method: "POST", cookie, raw, filename });
     return { id: result.data.id, name: result.data.name, sectionId };
   });
@@ -219,7 +231,7 @@ async function populateProject(spec, catalogs, partners, video) {
     return { id: result.id, databaseId: result.databaseId };
   });
   const project = { ...spec, ...created, sections };
-  await uploadDocument(project, null, creator.cookie);
+  await uploadDocument(project, null, creator);
   const stage = spec.scenarioIndex;
   if (stage === 0) return project;
 
@@ -249,7 +261,7 @@ async function populateProject(spec, catalogs, partners, video) {
   for (const [sectionIndex, section] of sections.entries()) {
     const teacher = await session(section.teacherEmail);
     const route = `/api/projects/${project.id}/sections/${section.id}`;
-    await uploadDocument(project, section.id, teacher.cookie);
+    await uploadDocument(project, section.id, teacher);
     const links = await step(`${spec.key}/${section.id}/links`, async () => (
       await api(`${route}/video-delivery-links`, { method: "POST", cookie: teacher.cookie })).data);
     if (stage === 4) continue;
@@ -381,74 +393,87 @@ async function main() {
   assert.equal(health.status, "ok");
   assert.equal(health.database.databaseName, LOCAL_DATABASE);
   const pool = await getPool();
-  let lock;
   try {
-    lock = fs.openSync(path.join(DIRECTORY, "running.lock"), "wx");
-    const admin = await session("admin@example.test");
-    if (fs.existsSync(STATE_FILE)) {
-      state = JSON.parse(fs.readFileSync(STATE_FILE, "utf8"));
-      assert.equal(state.planHash, digest(plan), "La receta cambió; no se modifica un escenario ya creado con otra receta.");
-    } else {
-      await assertFreshNamespace(pool);
-      state = { version: 1, planHash: digest(plan), database: LOCAL_DATABASE, today: currentDateInChile(),
-        baseline: await captureExisting(pool), steps: {}, complete: false };
-      saveState();
-    }
-    if (state.complete) {
-      const report = await verifyShowcase(pool, admin.cookie, state.projects, false);
-      console.log("Escenario ya creado. No se escribieron ni restablecieron datos de demostración.");
-      console.log(JSON.stringify(report.counts));
-      return;
-    }
-    const video = generateVideo();
-    await step("academic-import", async () => {
-      const preview = (await api("/api/academic-imports/preview", { method: "POST", cookie: admin.cookie, body: { rows: plan.academicRows } })).data;
-      assert.equal(preview.canApply, true, JSON.stringify(preview.issues));
-      const result = (await api("/api/academic-imports/apply", { method: "POST", cookie: admin.cookie,
-        body: { filename: "academic-showcase-DEMO26.json", rows: plan.academicRows } })).data;
-      return { id: result.id, summary: result.summary };
+    await withTransaction(async (transaction) => {
+      // SQL libera el bloqueo al terminar la transacción o desconectarse el proceso.
+      const result = await new sql.Request(transaction).query(`
+        DECLARE @result int;
+        EXEC @result = sys.sp_getapplock @Resource = N'VCM:DEMO26', @LockMode = 'Exclusive',
+          @LockOwner = 'Transaction', @LockTimeout = 0;
+        SELECT @result AS code;
+      `);
+      const code = result.recordset[0].code;
+      if (code === -1) throw new Error("Ya hay una carga DEMO26 en ejecución.");
+      assert.ok(code >= 0, `No se pudo reservar la carga DEMO26 (SQL ${code}).`);
+      await runShowcase(pool);
     });
-    console.log("Carga académica ficticia aplicada: 240 secciones y 2.880 estudiantes.");
-    for (const [index, account] of plan.accounts.entries()) {
-      await step(`account/${account.email}`, async () => {
-        const users = (await api("/api/users", { cookie: admin.cookie })).data;
-        const existing = users.find((user) => user.email === account.email);
-        if (existing) { assert.equal(existing.role, account.role.toLowerCase()); return { id: existing.id }; }
-        const result = (await api("/api/users", { method: "POST", cookie: admin.cookie, body: { ...account, password: PASSWORD } })).data;
-        return { id: result.id };
-      });
-      if ((index + 1) % 25 === 0) console.log(`Cuentas ficticias preparadas: ${index + 1}/250.`);
-    }
-    for (const partner of plan.partners) {
-      await step(`partner/${partner.contactEmail}`, async () => {
-        const partners = (await api("/api/partners", { cookie: admin.cookie })).data;
-        const existing = partners.find((row) => row.contactEmail === partner.contactEmail);
-        if (existing) return { id: existing.id };
-        return { id: (await api("/api/partners", { method: "POST", cookie: admin.cookie, body: partner })).data.id };
-      });
-    }
-    const catalogs = (await api("/api/academic-catalogs", { cookie: admin.cookie })).data;
-    const partners = (await api("/api/partners", { cookie: admin.cookie })).data;
-    const projects = [];
-    for (const spec of plan.projects) {
-      projects.push(await populateProject(spec, catalogs, partners, video));
-      console.log(`Proyecto ${projects.length}/80: ${spec.key} · ${spec.scenarioLabel}.`);
-    }
-    writeGuide(projects);
-    const report = await verifyShowcase(pool, admin.cookie, projects, true);
-    state.projects = projects;
-    state.report = report;
-    state.complete = true;
-    state.completedAt = new Date().toISOString();
-    saveState();
-    console.log("Escenario completo; registros anteriores conservados y estados de hitos comprobados.");
-    console.log(JSON.stringify(report, null, 2));
-    console.log("Guía y enlaces de prueba: .local/showcase/GUIA.md");
   } finally {
     for (const value of sessions.values()) await api("/api/auth/logout", { method: "POST", cookie: value.cookie }).catch(() => {});
     await pool.close();
-    if (lock !== undefined) { fs.closeSync(lock); fs.unlinkSync(path.join(DIRECTORY, "running.lock")); }
   }
+}
+
+async function runShowcase(pool) {
+  const admin = await session("admin@example.test");
+  if (fs.existsSync(STATE_FILE)) {
+    state = JSON.parse(fs.readFileSync(STATE_FILE, "utf8"));
+    assert.equal(state.planHash, digest(plan), "La receta cambió; no se modifica un escenario ya creado con otra receta.");
+  } else {
+    await assertFreshNamespace(pool);
+    state = { version: 1, planHash: digest(plan), database: LOCAL_DATABASE, today: currentDateInChile(),
+      baseline: await captureExisting(pool), steps: {}, complete: false };
+    saveState();
+  }
+  if (state.complete) {
+    const report = await verifyShowcase(pool, admin.cookie, state.projects, false);
+    console.log("Escenario ya creado. No se escribieron ni restablecieron datos de demostración.");
+    console.log(JSON.stringify(report.counts));
+    return;
+  }
+  const video = generateVideo();
+  await step("academic-import", async () => {
+    const preview = (await api("/api/academic-imports/preview", { method: "POST", cookie: admin.cookie, body: { rows: plan.academicRows } })).data;
+    assert.equal(preview.canApply, true, JSON.stringify(preview.issues));
+    const result = (await api("/api/academic-imports/apply", { method: "POST", cookie: admin.cookie,
+      body: { filename: "academic-showcase-DEMO26.json", rows: plan.academicRows } })).data;
+    return { id: result.id, summary: result.summary };
+  });
+  console.log("Carga académica ficticia aplicada: 240 secciones y 2.880 estudiantes.");
+  for (const [index, account] of plan.accounts.entries()) {
+    await step(`account/${account.email}`, async () => {
+      const users = (await api("/api/users", { cookie: admin.cookie })).data;
+      const existing = users.find((user) => user.email === account.email);
+      if (existing) { assert.equal(existing.role, account.role.toLowerCase()); return { id: existing.id }; }
+      const result = (await api("/api/users", { method: "POST", cookie: admin.cookie, body: { ...account, password: PASSWORD } })).data;
+      return { id: result.id };
+    });
+    if ((index + 1) % 25 === 0) console.log(`Cuentas ficticias preparadas: ${index + 1}/250.`);
+  }
+  for (const partner of plan.partners) {
+    await step(`partner/${partner.contactEmail}`, async () => {
+      const partners = (await api("/api/partners", { cookie: admin.cookie })).data;
+      const existing = partners.find((row) => row.contactEmail === partner.contactEmail);
+      if (existing) return { id: existing.id };
+      return { id: (await api("/api/partners", { method: "POST", cookie: admin.cookie, body: partner })).data.id };
+    });
+  }
+  const catalogs = (await api("/api/academic-catalogs", { cookie: admin.cookie })).data;
+  const partners = (await api("/api/partners", { cookie: admin.cookie })).data;
+  const projects = [];
+  for (const spec of plan.projects) {
+    projects.push(await populateProject(spec, catalogs, partners, video));
+    console.log(`Proyecto ${projects.length}/80: ${spec.key} · ${spec.scenarioLabel}.`);
+  }
+  writeGuide(projects);
+  const report = await verifyShowcase(pool, admin.cookie, projects, true);
+  state.projects = projects;
+  state.report = report;
+  state.complete = true;
+  state.completedAt = new Date().toISOString();
+  saveState();
+  console.log("Escenario completo; registros anteriores conservados y estados de hitos comprobados.");
+  console.log(JSON.stringify(report, null, 2));
+  console.log("Guía y enlaces de prueba: .local/showcase/GUIA.md");
 }
 
 main().catch((error) => { console.error(error.message); process.exitCode = 1; });

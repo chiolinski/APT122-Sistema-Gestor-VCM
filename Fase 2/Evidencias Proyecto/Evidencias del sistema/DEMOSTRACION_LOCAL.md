@@ -67,6 +67,6 @@ Antes de crear datos se comprueban colisiones de códigos, correos y RUT. Se gua
 
 El avance, enlaces temporales y archivos generados viven en `.local/showcase/`, ignorado por Git. El catálogo para explorar es `.local/showcase/GUIA.md`; las cuentas se listan en `cuentas.csv`.
 
-Se conserva `state.json` para reanudar tras un error. Al repetir una ejecución completada se verifican los datos y se preservan los cambios posteriores del usuario. Si se pierde ese estado pero existen entidades DEMO26, el ejecutor se detiene ante las colisiones en vez de reemplazarlas. No borres el estado para reinicializar ni ejecutes cargas simultáneas.
+Se conserva `state.json` para reanudar tras un error. SQL reserva la ejecución para un solo proceso y libera el bloqueo al desconectarse, incluso tras un cierre forzado. Si la API alcanzó a guardar un antecedente antes de registrar el paso en `state.json`, la reanudación verifica su autor y contenido y recupera el mismo archivo. Al repetir una ejecución completada se verifican los datos. Si se pierde el estado y existen entidades DEMO26, el ejecutor se detiene al detectar colisiones. Conserva `state.json` al reanudar.
 
 Los enlaces vencen naturalmente. Las descripciones reflejan el estado al crear la demostración; las pruebas manuales posteriores pueden modificarlo.

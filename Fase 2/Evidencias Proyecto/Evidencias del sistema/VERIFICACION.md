@@ -145,3 +145,9 @@ Con SQL Server, Azurite, Functions y Vite locales iniciados, se contrastaron los
 | Búsqueda sin coincidencias | 0 | 0 | Sin datos | Sin datos | 0 |
 
 Administración y coordinación tuvieron acceso. Seguimiento y exportación devolvieron 403 para un docente y 401 sin sesión. Un período que excede el largo permitido devolvió 400. En el navegador, con coordinación ficticia, se comprobaron el filtro combinado, las cifras de la tabla, los gráficos de la sede y la conservación del estado de alertas. Los registros de la prueba y los Excel de DEMO26 quedan en `.local/logs/metricas-live.json`, `.local/logs/verify-metricas.log` y `.local/logs/metricas-*.xlsx`.
+
+## Reanudación de DEMO26
+
+Con SQL, Azurite y la API local iniciados, se probó una copia de `state.json` marcada como incompleta y sin el paso de un antecedente ya guardado. La copia incluía un `running.lock` residual de la versión anterior. El ejecutor llegó a la descarga del antecedente mientras mantenía el bloqueo SQL, rechazó una segunda carga simultánea y se detuvo por cierre forzado. El siguiente intento recuperó el mismo identificador de archivo y completó la verificación de los 80 proyectos.
+
+Se conservaron los 260 registros de archivos, los 260 blobs de documentos y el estado original. Otra ejecución reconoció la carga completada. `npm run local:verify` aprobó aislamiento, lint, 56 pruebas frontend, 250 pruebas API y compilación.
