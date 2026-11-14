@@ -16,8 +16,9 @@ import {
 } from "lucide-react";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { Link } from "react-router-dom";
-import { Button, EmptyState, MetricCard, PageHeader, SearchInput, Select } from "../components/UI";
-import { downloadCoordinationMonitoring, getCoordinationMonitoring } from "../services/coreApi";
+import IndicatorsPanel from "../components/IndicatorsPanel";
+import { Button, Card, EmptyState, MetricCard, PageHeader, SearchInput, Select } from "../components/UI";
+import { downloadCoordinationMonitoring, getCoordinationMonitoring, getIndicators } from "../services/coreApi";
 
 const FILTERS = [
   { id: "all", label: "Todos" },
@@ -28,6 +29,7 @@ const FILTERS = [
 
 export default function CoordinationMonitoringPage() {
   const [report, setReport] = useState(null);
+  const [indicators, setIndicators] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
   const [search, setSearch] = useState("");
@@ -42,6 +44,7 @@ export default function CoordinationMonitoringPage() {
   const loadMonitoring = useCallback(async () => {
     setLoading(true);
     setError("");
+        getIndicators().then(setIndicators).catch(() => setIndicators(null));
     try {
       setReport(await getCoordinationMonitoring());
     } catch (requestError) {
@@ -140,7 +143,8 @@ export default function CoordinationMonitoringPage() {
             <MetricCard icon={Users} label="Seguimientos cerrados" value={`${report.summary.completedTeacherFollowUps}/${report.summary.teacherFollowUps}`} detail="Docente por proyecto" tone="green" />
             <MetricCard icon={CalendarClock} label="Listos para avanzar" value={report.summary.readyProjects} detail="Requieren acción o supervisión" tone="purple" />
           </div>
-
+          {indicators && <IndicatorsPanel indicators={indicators} />}
+          
           <MonitoringAlerts alerts={report.alerts} projects={report.projects} />
 
           <section className="monitoring-workspace" aria-labelledby="monitoring-projects-title">
@@ -280,3 +284,4 @@ function formatDate(value) {
   if (!value) return "Sin fecha";
   return new Intl.DateTimeFormat("es-CL", { day: "2-digit", month: "short", year: "numeric", timeZone: "UTC" }).format(new Date(`${value}T00:00:00Z`));
 }
+
