@@ -1,0 +1,46 @@
+@startuml
+title UML de secuencia del flujo de hitos
+skinparam shadowing false
+skinparam defaultFontName Arial
+skinparam maxMessageSize 220
+actor "Coordinación" as C
+actor "Docente" as D
+actor "Equipo" as E
+actor "Socio" as S
+participant "Web y API HTTP" as API
+database "SQL Server" as SQL
+participant "Azurite" as Blob
+C -> API : Crear proyecto con asignatura y secciones
+API -> SQL : Registrar proyecto, secciones e hitos
+D -> API : Organizar nómina y asignar equipos (Hito 1)
+API -> SQL : Validar sección y registrar avance
+C -> API : Programar apertura del Hito 2
+API -> SQL : Verificar Hito 1 en todas las secciones
+alt Hito 1 global incompleto
+  API --> C : Rechazar apertura
+else Se cumple el requisito
+  API --> C : Confirmar programación
+end
+group Hito 2 con enlaces habilitados
+  D -> API : Generar enlace de entrega por equipo
+  E -> API : Solicitar firma de carga con token
+  API --> E : URL SAS temporal
+  E -> Blob : PUT de video
+  E -> API : Confirmar entrega
+  API -> Blob : Comprobar blob y tamaño
+  API -> SQL : Registrar video confirmado
+  D -> API : Publicar revisión para el socio
+  S -> API : Abrir enlace y solicitar video firmado
+  API --> S : URL SAS de lectura para equipo autorizado
+  S -> Blob : Leer video firmado
+  S -> API : Guardar evaluación y enviar revisión
+  API -> SQL : Persistir evaluaciones y estado de revisión
+  D -> API : Revisar retroalimentación y cerrar Hito 2
+  API -> SQL : Registrar revisión usada y consolidar
+end
+group Hito 3 cuando se cumplen los requisitos
+  D -> API : Cerrar su sección con evidencias y conclusiones
+  API -> SQL : Guardar cierre y consolidar estado del proyecto
+  API --> D : Confirmar el resultado
+end
+@enduml

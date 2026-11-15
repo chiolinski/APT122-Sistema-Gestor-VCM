@@ -1,0 +1,79 @@
+@startuml
+title ER clásico de acceso y datos académicos
+skinparam shadowing false
+skinparam defaultFontName Arial
+hide circle
+hide methods
+entity Usuario {
+  *usuario_id <<PK>>
+  --
+  correo <<UQ>>
+  rol
+}
+entity SesionUsuario {
+  *sesion_usuario_id <<PK>>
+  --
+  usuario_id <<FK>>
+}
+entity Docente {
+  *docente_id <<PK>>
+  --
+  usuario_id <<FK opcional>>
+}
+entity DocenteSeccion {
+  *docente_id <<PK, FK>>
+  *seccion_id <<PK, FK>>
+  --
+  carga_academica_id <<FK>>
+  vigente
+}
+entity Sede {
+  *sede_id <<PK>>
+}
+entity PeriodoAcademico {
+  *periodo_academico_id <<PK>>
+}
+entity Escuela {
+  *escuela_id <<PK>>
+}
+entity Asignatura {
+  *asignatura_id <<PK>>
+  --
+  escuela_id <<FK opcional>>
+}
+entity Seccion {
+  *seccion_id <<PK>>
+  --
+  sede_id <<FK>>
+  periodo_academico_id <<FK>>
+  asignatura_id <<FK>>
+  carga_academica_id <<FK>>
+}
+entity CargaAcademica {
+  *carga_academica_id <<PK>>
+}
+entity Alumno {
+  *alumno_id <<PK>>
+}
+entity Matricula {
+  *matricula_id <<PK>>
+  --
+  alumno_id <<FK>>
+  seccion_id, asignatura_id <<FK compuesta>>
+  carga_academica_id <<FK>>
+  vigente
+}
+Usuario ||--o{ SesionUsuario
+Usuario |o--o| Docente
+Docente ||--o{ DocenteSeccion
+Seccion ||--o{ DocenteSeccion
+Escuela |o--o{ Asignatura
+Asignatura ||--o{ Seccion
+Sede ||--o{ Seccion
+PeriodoAcademico ||--o{ Seccion
+CargaAcademica |o--o{ Seccion
+CargaAcademica |o--o{ DocenteSeccion
+CargaAcademica |o--o{ Matricula
+Alumno ||--o{ Matricula
+Seccion ||--o{ Matricula
+@enduml

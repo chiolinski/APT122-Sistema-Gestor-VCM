@@ -1,0 +1,23 @@
+@startuml
+title Arquitectura del entorno local VCM
+skinparam shadowing false
+skinparam defaultFontName Arial
+skinparam defaultTextAlignment center
+left to right direction
+actor "Personal interno,\nestudiantes y socios" as users
+node "Equipo de pruebas" {
+  node "Host o contenedor app" {
+    component "Web React + Vite\nPuerto local 5176" as web
+    component "Azure Functions v4\nAPI local 7076" as api
+  }
+  node "Infraestructura Docker Compose" {
+    database "SQL Server 2022\nvcm_piloto_2026_local\nHost 127.0.0.1:14333" as db
+    storage "Azurite\nDocumentos y videos privados\nHost 127.0.0.1:10000" as blob
+  }
+}
+users --> web : HTTP en loopback
+web --> api : HTTP JSON y Excel\nproxy /api
+api --> db : TDS / mssql\nsesiones, datos y auditoría
+api --> blob : SDK de Blob\narchivos y firma SAS
+users ..> blob : HTTP directo con SAS\ncarga y lectura de video
+@enduml

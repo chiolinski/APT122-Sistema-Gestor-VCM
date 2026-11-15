@@ -1,6 +1,25 @@
-# VCM Piloto 2026 · entorno local de pruebas
+# Sistema Gestor de Proyectos VCM
 
-Copia independiente del sistema piloto. Frontend React/Vite, API Azure Functions, SQL Server Developer y Azurite en este equipo. No contiene una copia de la base productiva. No es un despliegue de producción.
+Proyecto académico APT122 para gestionar proyectos de Vinculación con el Medio. La aplicación de pruebas usa React, Azure Functions, SQL Server y Azurite con datos ficticios.
+
+## Entrega final de Fase 2
+
+| Entregable | Archivo |
+| --- | --- |
+| Informe final con índice y anexos | [Word](Fase%202/Evidencias%20Grupales/APT122_Informe_Final_Proyecto_VCM.docx) · [PDF](Fase%202/Evidencias%20Grupales/APT122_Informe_Final_Proyecto_VCM.pdf) |
+| Presentación final | [PowerPoint](Fase%202/Evidencias%20Grupales/APT122_Presentacion_Final_Proyecto_VCM.pptx) |
+| Planilla de evaluación | [Excel](Fase%202/Evidencias%20Grupales/APT122_Planilla_Evaluacion_Fase2.xlsx) |
+| Diario de reflexión grupal | [Word](Fase%202/Evidencias%20Grupales/APT122_Diario_Reflexion_Grupal_Fase2.docx) |
+
+## Navegación del repositorio
+
+- [Fase 1](Fase%201/README.md) reúne la definición del proyecto y las evidencias de esa etapa.
+- [Fase 2](Fase%202/README.md) organiza el avance, el cierre y las evidencias del proyecto.
+- [Documentación del proyecto](Fase%202/Evidencias%20Proyecto/README.md) enlaza las épicas, el backlog y las historias de usuario.
+- [Código y guía de arranque](Fase%202/Evidencias%20Proyecto/Evidencias%20del%20sistema/README.md#arranque-completo-con-docker) explica cómo levantar la aplicación local con Docker.
+- [Dockerfile](Fase%202/Evidencias%20Proyecto/Evidencias%20del%20sistema/Dockerfile), [Compose de infraestructura](Fase%202/Evidencias%20Proyecto/Evidencias%20del%20sistema/compose.yaml) y [Compose de aplicación](Fase%202/Evidencias%20Proyecto/Evidencias%20del%20sistema/compose.app.yaml).
+- [Cierre técnico](Fase%202/Evidencias%20Proyecto/Evidencias%20del%20sistema/docs/CIERRE_TECNICO.md) reúne la arquitectura, el modelo entidad-relación y UML. [Fuentes de los diagramas](Fase%202/Evidencias%20Proyecto/Evidencias%20del%20sistema/docs/diagramas/).
+- [Resultados de verificación](Fase%202/Evidencias%20Proyecto/Evidencias%20del%20sistema/VERIFICACION.md) documenta las pruebas del entorno local.
 
 ## Requisitos
 
@@ -11,9 +30,12 @@ Copia independiente del sistema piloto. Frontend React/Vite, API Azure Functions
 
 La primera instalación descarga paquetes npm e imágenes de contenedores. Una vez instalados, la aplicación utiliza servicios locales.
 
-## Primera preparación (PowerShell, desde esta carpeta)
+## Primera preparación en modo desarrollo
+
+Ejecuta esta secuencia desde la raíz del repositorio. Para el arranque completo en contenedores, sigue la guía de Docker enlazada arriba.
 
 ```powershell
+Set-Location 'Fase 2/Evidencias Proyecto/Evidencias del sistema'
 npm ci
 npm --prefix api ci
 npm run local:configure

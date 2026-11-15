@@ -1,0 +1,119 @@
+@startuml
+title ER clásico de proyectos y evidencias
+skinparam shadowing false
+skinparam defaultFontName Arial
+hide circle
+hide methods
+entity Proyecto {
+  *proyecto_id <<PK>>
+  --
+  asignatura_id <<FK>>
+  socio_formador_id <<FK>>
+  estado
+}
+entity SocioFormador {
+  *socio_formador_id <<PK>>
+}
+entity Seccion {
+  *seccion_id <<PK>>
+}
+entity ProyectoSeccion {
+  *proyecto_id <<PK, FK>>
+  *seccion_id <<PK, FK>>
+}
+entity ProyectoSede {
+  *proyecto_id <<PK, FK>>
+  *sede_id <<PK, FK>>
+}
+entity Sede {
+  *sede_id <<PK>>
+}
+entity HitoProyecto {
+  *hito_proyecto_id <<PK>>
+  --
+  proyecto_id <<FK>>
+  numero
+}
+entity HitoProyectoSeccion {
+  *hito_proyecto_seccion_id <<PK>>
+  --
+  proyecto_id, seccion_id <<FK compuesta>>
+  numero
+}
+entity AvanceProyectoSeccion {
+  *avance_proyecto_seccion_id <<PK>>
+  --
+  proyecto_id, seccion_id <<FK compuesta, UQ>>
+  revision_socio_id <<FK opcional>>
+}
+entity Equipo {
+  *equipo_id <<PK>>
+  --
+  proyecto_id <<FK>>
+  seccion_id <<FK>>
+}
+entity EquipoAlumno {
+  *equipo_id <<PK, FK>>
+  *alumno_id <<PK, FK>>
+  --
+  proyecto_id <<FK>>
+}
+entity Alumno {
+  *alumno_id <<PK>>
+}
+entity ProyectoAlumnoEstado {
+  *proyecto_id <<PK, FK compuesta>>
+  *alumno_id <<PK, FK>>
+  --
+  seccion_id <<FK compuesta>>
+}
+entity ArchivoProyecto {
+  *archivo_proyecto_id <<PK>>
+  --
+  proyecto_id <<FK>>
+  seccion_id <<FK opcional>>
+}
+entity EntregaVideoEquipo {
+  *entrega_video_equipo_id <<PK>>
+  --
+  proyecto_id, seccion_id <<FK compuesta>>
+  equipo_id
+  token_hash <<UQ>>
+}
+entity RevisionSocio {
+  *revision_socio_id <<PK>>
+  --
+  proyecto_id <<FK>>
+  seccion_id <<FK>>
+  socio_formador_id <<FK>>
+}
+entity EvaluacionSocioEquipo {
+  *revision_socio_id <<PK, FK>>
+  *equipo_id <<PK>>
+  --
+  valoracion
+}
+SocioFormador ||--o{ Proyecto
+Proyecto ||--o{ ProyectoSede
+Sede ||--o{ ProyectoSede
+Proyecto ||--o{ ProyectoSeccion
+Seccion ||--o{ ProyectoSeccion
+Proyecto ||--o{ HitoProyecto
+ProyectoSeccion ||--o{ HitoProyectoSeccion
+ProyectoSeccion ||--o| AvanceProyectoSeccion
+RevisionSocio |o--o{ AvanceProyectoSeccion
+ProyectoSeccion ||--o{ EntregaVideoEquipo
+ProyectoSeccion ||--o{ ProyectoAlumnoEstado
+Alumno ||--o{ ProyectoAlumnoEstado
+Proyecto ||--o{ Equipo
+Seccion ||--o{ Equipo
+Equipo ||--o{ EquipoAlumno
+Alumno ||--o{ EquipoAlumno
+Proyecto ||--o{ EquipoAlumno
+Proyecto ||--o{ ArchivoProyecto
+Seccion |o--o{ ArchivoProyecto
+Proyecto ||--o{ RevisionSocio
+Seccion ||--o{ RevisionSocio
+SocioFormador ||--o{ RevisionSocio
+RevisionSocio ||--o{ EvaluacionSocioEquipo
+@enduml

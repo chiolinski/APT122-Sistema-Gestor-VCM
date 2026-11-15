@@ -1,0 +1,28 @@
+@startuml
+title UML de componentes VCM
+skinparam shadowing false
+skinparam defaultFontName Arial
+top to bottom direction
+package "Frontend" {
+  component "Páginas React\nProyectos, Seguimiento y enlaces" as pages
+  component "Servicios HTTP\ncoreApi, authApi y apiClient" as transport
+}
+package "API Node de Azure Functions" {
+  component "Funciones HTTP\nAutenticación, proyectos, Hito 2 y exportación" as routes
+  component "Permisos y reglas\nSesión, rol, sección y tokens" as rules
+  component "Repositorios\nProyectos, revisiones, videos y seguimiento" as repos
+  component "Libro de seguimiento\nExcelJS y gráficos OOXML" as workbook
+  component "Adaptadores de datos\ndb, almacenamiento y localSafety" as adapters
+}
+database "SQL Server" as sql
+storage "Azurite" as az
+pages --> transport
+transport --> routes : /api
+routes --> rules : valida
+routes --> repos : consulta o modifica
+routes --> workbook : compone archivo
+rules --> repos : sesión y alcance
+repos --> adapters
+adapters --> sql
+adapters --> az
+@enduml
