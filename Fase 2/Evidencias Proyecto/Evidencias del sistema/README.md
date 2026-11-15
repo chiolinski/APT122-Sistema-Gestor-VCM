@@ -2,6 +2,8 @@
 
 Copia independiente del sistema piloto. Frontend React/Vite, API Azure Functions, SQL Server Developer y Azurite en este equipo. No contiene una copia de la base productiva. No es un despliegue de producción.
 
+Consulta el [cierre técnico de APT122](docs/CIERRE_TECNICO.md) para los diagramas, requisitos y pruebas.
+
 ## Requisitos
 
 - Node.js 22 LTS y npm.
@@ -52,6 +54,27 @@ Todas las cuentas nuevas utilizan `LocalVCM2026!`:
 La carga inicial crea dos sedes ficticias, una asignatura LOCAL101, dos secciones, doce estudiantes, un socio ficticio y un proyecto con tres hitos por sección. Los RUT son valores generados para pruebas, sin relación con personas u organizaciones reales. Los correos pertenecen a example.test. No se envían correos.
 
 `npm run local:setup` se puede repetir: omite migraciones e importaciones ya aplicadas y no restablece cuentas existentes. Los videos no incluyen grabaciones: se deben cargar MP4 de prueba desde el flujo de Hito 2.
+
+## Arranque completo con Docker
+
+Usa Docker Desktop con contenedores Linux o Docker Engine con Compose v2. Node.js en el equipo genera la configuración inicial. La imagen incluye el runtime de Functions y la web compilada. Libera el puerto 5176 si tienes Vite iniciado.
+
+```powershell
+npm run local:configure
+docker compose -f compose.yaml -f compose.app.yaml build app
+docker compose -f compose.yaml -f compose.app.yaml run --rm app node scripts/docker-local.cjs --setup
+docker compose -f compose.yaml -f compose.app.yaml up -d --wait app
+```
+
+Abre [la aplicación local](http://127.0.0.1:5176). Comprueba el estado de la base con [la ruta de salud](http://127.0.0.1:5176/api/health). El paso `--setup` prepara SQL, los contenedores privados de Azurite y las cuentas ficticias. Repítelo al incorporar migraciones locales. Los dos modos de arranque usan los mismos volúmenes del proyecto.
+
+```powershell
+npm run test:performance -- --docker
+docker compose -f compose.yaml -f compose.app.yaml logs app --tail 50
+docker compose -f compose.yaml -f compose.app.yaml stop
+```
+
+La prueba de rendimiento usa `admin@example.test`. Si cambiaste esa contraseña ficticia, configura `VCM_TEST_ADMIN_PASSWORD` en la terminal. La prueba mide consultas y expide nueve archivos Excel en memoria, incluido el calentamiento. La API registra la auditoría normal de esas exportaciones.
 
 ## Uso diario y pruebas
 

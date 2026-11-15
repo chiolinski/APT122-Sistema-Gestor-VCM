@@ -1,0 +1,19 @@
+services:
+  app:
+    build: .
+    init: true
+    depends_on:
+      - sql
+      - storage
+    environment:
+      FUNCTIONS_WORKER_RUNTIME: node
+      AzureWebJobsStorage: UseDevelopmentStorage=true
+      AZURE_SQL_CONNECTION_STRING: "Server=127.0.0.1,14333;Database=vcm_piloto_2026_local;User Id=sa;Password=${VCM_LOCAL_SQL_PASSWORD:?Ejecuta npm run local:configure};Encrypt=false;TrustServerCertificate=true;Connection Timeout=5;"
+    ports:
+      - "127.0.0.1:5176:5176"
+    healthcheck:
+      test: ["CMD", "node", "-e", "fetch('http://127.0.0.1:5176/api/health',{signal:AbortSignal.timeout(4000)}).then(r=>process.exit(r.ok?0:1)).catch(()=>process.exit(1))"]
+      interval: 10s
+      timeout: 5s
+      start_period: 30s
+      retries: 5

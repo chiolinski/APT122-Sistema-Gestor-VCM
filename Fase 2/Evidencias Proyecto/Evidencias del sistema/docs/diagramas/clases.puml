@@ -1,0 +1,45 @@
+@startuml
+title UML de clases conceptuales del dominio
+skinparam shadowing false
+skinparam defaultFontName Arial
+hide circle
+hide empty members
+class Proyecto {
+  codigoPublico
+  estado
+}
+class Seccion {
+  codigo
+  sede
+  periodo
+}
+class ProyectoSeccion
+class HitoProyectoSeccion {
+  numero
+  estado
+}
+class Equipo
+class EntregaVideoEquipo {
+  venceEn
+  entregadoEn
+}
+class SocioFormador
+class RevisionSocio {
+  venceEn
+  revocadoEn
+  completadoEn
+}
+class EvaluacionSocioEquipo {
+  valoracion
+}
+Proyecto "1" -- "0..*" ProyectoSeccion
+Seccion "1" -- "0..*" ProyectoSeccion
+ProyectoSeccion "1" -- "3" HitoProyectoSeccion : hitos operativos
+ProyectoSeccion "1" -- "0..*" Equipo : agrupa
+Equipo "1" -- "0..*" EntregaVideoEquipo : identifica
+Proyecto "0..*" -- "1" SocioFormador : vincula
+ProyectoSeccion "1" -- "0..*" RevisionSocio : alcance
+SocioFormador "1" -- "0..*" RevisionSocio : responde
+RevisionSocio "1" -- "0..*" EvaluacionSocioEquipo
+EvaluacionSocioEquipo "0..*" -- "1" Equipo : identifica
+@enduml
