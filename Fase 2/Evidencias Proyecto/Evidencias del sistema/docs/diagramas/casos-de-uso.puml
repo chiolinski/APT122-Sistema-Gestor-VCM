@@ -1,0 +1,32 @@
+@startuml
+title UML de casos de uso VCM
+skinparam shadowing false
+skinparam defaultFontName Arial
+left to right direction
+actor "Administración" as adm
+actor "Coordinación CITT /\nDirección de Carrera" as coord
+actor "Docente asignado" as doc
+actor "Estudiante con enlace" as student
+actor "Socio con enlace" as partner
+rectangle "Sistema VCM" {
+  usecase "Gestionar cuentas y\ncarga académica" as config
+  usecase "Proponer proyectos y\nvincular socios" as create
+  usecase "Programar apertura\ndel Hito 2" as schedule
+  usecase "Consultar indicadores y\nexportar seguimiento" as tracking
+  usecase "Gestionar nómina y equipos\nde la propia sección" as roster
+  usecase "Generar enlaces y revisar\nretroalimentación" as evaluate
+  usecase "Cerrar hitos de\nla propia sección" as close
+  usecase "Entregar video de\nsu equipo" as upload
+  usecase "Evaluar equipos\nhabilitados" as review
+}
+adm -- config
+adm -- tracking
+coord -- create
+coord -- schedule
+coord -- tracking
+doc -- roster
+doc -- evaluate
+doc -- close
+student -- upload
+partner -- review
+@enduml

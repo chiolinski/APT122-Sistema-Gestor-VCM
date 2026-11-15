@@ -17,6 +17,7 @@
     "local:api": "npm --prefix api start",
     "test:api": "npm --prefix api test",
     "test:integration": "npm --prefix api run test:integration",
+    "test:performance": "node scripts/local-performance.cjs",
     "test:isolation": "node --test api/test/localIsolation.test.js",
     "local:verify": "npm run test:isolation && npm run lint && npm test && npm run test:api && npm run build"
   },

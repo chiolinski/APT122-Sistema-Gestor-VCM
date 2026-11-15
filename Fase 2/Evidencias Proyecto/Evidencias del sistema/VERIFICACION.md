@@ -153,3 +153,24 @@ Con SQL, Azurite y la API local iniciados, se probó una copia de `state.json` m
 Se conservaron los 260 registros de archivos, los 260 blobs de documentos y el estado original. Otra ejecución reconoció la carga completada. `npm run local:verify` aprobó aislamiento, lint, 56 pruebas frontend, 250 pruebas API y compilación.
 
 Al incorporar los cambios del PR #2, se verificaron la pantalla y las exportaciones de Seguimiento junto con la API de indicadores. Pasaron 58 pruebas de frontend, 262 de API y las 8 de `npm run test:integration`. La prueba de cierre forzado de DEMO26 volvió a recuperar el mismo antecedente y conservó los 260 registros y blobs.
+
+## Pauta de cierre técnico APT122 · 15 de noviembre de 2026
+
+La matriz de cobertura, los diagramas y los requisitos no funcionales están en [docs/CIERRE_TECNICO.md](docs/CIERRE_TECNICO.md). Se generaron y revisaron siete diagramas SVG con sus fuentes PlantUML. El informe final de Word incorpora las tres respuestas de Innovación en la sección 7 y se comprobó visualmente. El Word y el PDF de entrega agrupan Innovación, cuatro anexos y el índice en 19 páginas.
+
+- `npm run local:verify` aprobó 58 pruebas de frontend y 263 de API, además de lint y build. Las siete pruebas de aislamiento también se ejecutaron por separado y están incluidas en el total de API.
+- `npm run test:integration` aprobó 8 pruebas sobre SQL real y la API local. Incluye los rechazos HTTP 401, 403 y 400 por sesión ausente, rol docente y período inválido.
+- La configuración y la construcción de Docker Compose pasaron. En volúmenes separados se creó la base de pruebas, se aplicaron las 18 migraciones, se prepararon los contenedores privados de Azurite y se cargaron los fixtures iniciales. La aplicación recién instalada respondió saludable.
+- En los volúmenes habituales, Seguimiento y el recurso JavaScript respondieron HTTP 200 y la web entregó el encabezado CSP. Después de reiniciar el contenedor de aplicación, salud volvió a responder y Seguimiento devolvió los 97 proyectos del entorno local.
+
+La prueba de rendimiento se ejecutó contra `127.0.0.1:5176` con `npm run test:performance -- --docker`. Midió desde el envío de la solicitud hasta la lectura completa de la respuesta. Hubo un calentamiento por ruta y las exportaciones usaron `scope=finished`.
+
+| Ruta | Muestras | Concurrencia | p95 observado | Límite local | Errores |
+| --- | ---: | ---: | ---: | ---: | ---: |
+| Salud SQL | 24 | 4 | 36 ms | 750 ms | 0 |
+| Seguimiento | 24 | 4 | 351 ms | 2.500 ms | 0 |
+| Excel de finalizados | 8 | 2 | 762 ms | 6.000 ms | 0 |
+
+Los resultados corresponden a una instancia en Docker Desktop, con el portafolio ficticio de este equipo. Registros locales en `.local/logs/entrega-verify.log`, `entrega-integration.log`, `entrega-performance.log` y `entrega-docker-fresco.log`.
+
+La copia académica de Fase 2 también se verificó con npm run local:verify, lint y compilación. Se construyó la imagen Docker desde esa copia, se aplicaron las 18 migraciones en volúmenes de prueba independientes y se comprobó HTTP 200 en Seguimiento y en la ruta de salud. Las cifras de rendimiento de arriba corresponden al portafolio local ampliado usado para el informe.

@@ -1,0 +1,14 @@
+.git
+.agents
+.codex
+.aws
+.azure
+.local
+.tmp
+outputs
+**/node_modules
+**/dist
+**/.env
+**/.env.*
+api/local.settings*.json
+**/*.log
