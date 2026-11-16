@@ -81,7 +81,10 @@ La carga inicial crea dos sedes ficticias, una asignatura LOCAL101, dos seccione
 npm run local:infra          # iniciar contenedores
 npm run local:api            # terminal 1
 npm run dev                  # terminal 2
+npm run local:demo           # opcional: cargar datos de demostración ampliados
 npm run local:verify         # aislamiento, lint, tests frontend/API y build
+npm run test:integration     # pruebas de integración con SQL y API locales
+npm run test:performance     # tiempos de respuesta de Seguimiento y Excel
 npm run local:stop           # detener contenedores conservando datos
 ```
 
