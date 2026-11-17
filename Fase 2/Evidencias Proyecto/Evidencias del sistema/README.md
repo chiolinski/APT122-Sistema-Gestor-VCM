@@ -94,6 +94,8 @@ SQL se conserva en el volumen Docker de este proyecto y los archivos en otro vol
 
 Con los servicios locales iniciados, `npm run local:demo` agrega 250 cuentas internas, 2.880 estudiantes, 40 socios y 80 proyectos ficticios en distintos hitos. Requiere `ffmpeg` y `ffprobe` para los videos sintéticos. Conserva los datos existentes y permite reanudar una carga interrumpida. Consulta [DEMOSTRACION_LOCAL.md](DEMOSTRACION_LOCAL.md) para las cuentas, los escenarios y el funcionamiento de la carga.
 
+Para reproducir la demostración DUOC26, ejecuta `npm run local:demo:duoc` con la API y la infraestructura locales iniciadas en modo desarrollo. En Seguimiento, busca `DUOC26` y selecciona el período `2026-2`. Consulta la [guía del escenario](DEMOSTRACION_LOCAL.md#demostraci%C3%B3n-de-inform%C3%A1tica-y-telecomunicaciones-de-duoc-uc).
+
 ## Git e incorporación de cambios
 
 El Git de esta carpeta se inicializó en `main`. La referencia académica es [APT122-Sistema-Gestor-VCM](https://github.com/chiolinski/APT122-Sistema-Gestor-VCM), donde el código se encuentra en `Fase 2/Evidencias Proyecto/Evidencias del sistema/`. Consulta [CONTEXTO_PROYECTO.md](CONTEXTO_PROYECTO.md) para comparar versiones desde esa ruta.

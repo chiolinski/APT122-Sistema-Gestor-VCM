@@ -174,3 +174,12 @@ La prueba de rendimiento se ejecutó contra `127.0.0.1:5176` con `npm run test:p
 Los resultados corresponden a una instancia en Docker Desktop, con el portafolio ficticio de este equipo. Registros locales en `.local/logs/entrega-verify.log`, `entrega-integration.log`, `entrega-performance.log` y `entrega-docker-fresco.log`.
 
 La copia académica de Fase 2 también se verificó con npm run local:verify, lint y compilación. Se construyó la imagen Docker desde esa copia, se aplicaron las 18 migraciones en volúmenes de prueba independientes y se comprobó HTTP 200 en Seguimiento y en la ruta de salud. Las cifras de rendimiento de arriba corresponden al portafolio local ampliado usado para el informe.
+
+## DUOC26 en la copia académica
+
+El 17 de noviembre de 2026 se verificó `npm run local:demo:duoc` con la API local, SQL Server y Azurite, a partir de volúmenes de prueba separados. Se aplicaron las 18 migraciones y se cargaron los datos iniciales antes de generar DUOC26.
+
+- La carga agregó 16 proyectos, 48 secciones, 576 estudiantes y 61 cuentas internas ficticias. Se confirmaron 93 videos sintéticos y el generador comprobó la preservación de 78 registros preexistentes.
+- Al repetir el comando, el generador reconoció el escenario completo y conservó sus totales.
+- Seguimiento filtrado por `DUOC26` y período `2026-2` devolvió los 16 proyectos y seis sedes. En Maipú, la API y el Excel coincidieron en 60 de 84 estudiantes participantes y 10 de 21 hitos completados.
+- Pasaron 58 pruebas de frontend, 263 de API y 8 de integración. También pasaron lint, aislamiento y compilación.

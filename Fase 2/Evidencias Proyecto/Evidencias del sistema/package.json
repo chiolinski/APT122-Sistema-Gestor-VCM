@@ -14,6 +14,7 @@
     "local:stop": "docker compose stop",
     "local:setup": "node scripts/local-setup.cjs",
     "local:demo": "npm --prefix api run seed:showcase",
+    "local:demo:duoc": "npm --prefix api run seed:showcase -- --duoc",
     "local:api": "npm --prefix api start",
     "test:api": "npm --prefix api test",
     "test:integration": "npm --prefix api run test:integration",

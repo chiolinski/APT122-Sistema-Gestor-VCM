@@ -9,14 +9,16 @@ const { LOCAL_DATABASE } = require("../src/lib/localSafety");
 const { getConfig } = require("../src/lib/config");
 const { writeAudit } = require("../src/lib/audit");
 const { currentDateInChile } = require("../src/lib/coordinationMonitoring");
-const { PREFIX, PASSWORD, SCENARIOS, buildShowcase, buildAssignment } = require("./lib/showcase-fixtures");
+const { PASSWORD, SCENARIOS, buildShowcase, buildAssignment } = require("./lib/showcase-fixtures");
 
 const ROOT = path.resolve(__dirname, "../..");
-const DIRECTORY = path.join(ROOT, ".local/showcase");
+const duoc = process.argv.includes("--duoc");
+const stateDirectory = duoc ? ".local/showcase-duoc" : ".local/showcase";
+const DIRECTORY = path.join(ROOT, stateDirectory);
 const STATE_FILE = path.join(DIRECTORY, "state.json");
 const BASE = "http://127.0.0.1:7076";
 const WEB = "http://127.0.0.1:5176";
-const plan = buildShowcase();
+const plan = buildShowcase({ duoc });
 const digest = (value) => crypto.createHash("sha256").update(JSON.stringify(value)).digest("hex");
 let state;
 const sessions = new Map();
@@ -106,7 +108,7 @@ async function assertFreshNamespace(pool) {
     SELECT correo FROM vcm.Usuario;
     SELECT codigo FROM vcm.Sede;
     SELECT codigo FROM vcm.Asignatura;
-    SELECT nombre FROM vcm.Escuela;
+    SELECT nombre, activa FROM vcm.Escuela;
     SELECT identificador_fuente,correo FROM vcm.Docente;
     SELECT rut,identificador_externo,correo FROM vcm.Alumno;
     SELECT rut,contacto_correo FROM vcm.SocioFormador;
@@ -115,12 +117,14 @@ async function assertFreshNamespace(pool) {
   const compact = (value) => String(value || "").replace(/[.\s-]/g, "").toUpperCase();
   const overlap = (values, wanted, label, normalize = (v) => String(v || "").toLowerCase()) => {
     const keys = new Set(values.map(normalize));
-    if (wanted.some((value) => keys.has(normalize(value)))) throw new Error(`Ya existen ${label} del escenario. Se detiene para conservarlos; recupera .local/showcase/state.json para reanudar.`);
+    if (wanted.some((value) => keys.has(normalize(value)))) throw new Error(`Ya existen ${label} del escenario. Se detiene para conservarlos. Para reanudar, recupera ${stateDirectory}/state.json.`);
   };
   overlap(existing.recordsets[0].map((r) => r.correo), plan.accounts.map((r) => r.email), "cuentas");
   overlap(existing.recordsets[1].map((r) => r.codigo), plan.campuses.map((r) => r.code), "sedes");
   overlap(existing.recordsets[2].map((r) => r.codigo), plan.subjects.map((r) => r.code), "asignaturas");
-  overlap(existing.recordsets[3].map((r) => r.nombre), plan.subjects.map((r) => r.schoolName), "escuelas");
+  const schoolNames = new Set(plan.subjects.map((subject) => subject.schoolName));
+  const conflictingSchools = existing.recordsets[3].filter(({ nombre, activa }) => !duoc || !activa || !schoolNames.has(nombre));
+  overlap(conflictingSchools.map((school) => school.nombre), [...schoolNames], "escuelas");
   overlap(existing.recordsets[4].flatMap((r) => [r.identificador_fuente, r.correo]), plan.academicRows.flatMap((r) => [r.docente_id, r.docente_correo]), "docentes", compact);
   overlap(existing.recordsets[5].flatMap((r) => [r.rut, r.identificador_externo, r.correo]), plan.academicRows.flatMap((r) => [r.estudiante_rut, r.estudiante_id, r.estudiante_correo]), "estudiantes", compact);
   overlap(existing.recordsets[6].flatMap((r) => [r.rut, r.contacto_correo]), plan.partners.flatMap((r) => [r.taxId, r.contactEmail]), "socios", compact);
@@ -133,10 +137,13 @@ function generateVideo() {
   const file = path.join(DIRECTORY, "video-ficticio.mp4");
   if (!fs.existsSync(file)) {
     const font = path.join(process.env.WINDIR || "C:/Windows", "Fonts/arial.ttf");
-    if (!fs.existsSync(font)) throw new Error("No se encontró Arial para rotular el video ficticio.");
-    fs.copyFileSync(font, path.join(DIRECTORY, "font.ttf"));
+    const filters = [];
+    if (fs.existsSync(font)) {
+      fs.copyFileSync(font, path.join(DIRECTORY, "font.ttf"));
+      filters.push("-vf", "drawtext=fontfile=font.ttf:text='VCM LOCAL - VIDEO FICTICIO':fontcolor=white:fontsize=22:x=(w-tw)/2:y=(h-th)/2:box=1:boxcolor=black@0.7");
+    }
     const result = spawnSync("ffmpeg", ["-nostdin", "-n", "-f", "lavfi", "-i", "testsrc2=size=480x270:rate=15",
-      "-t", "3", "-vf", "drawtext=fontfile=font.ttf:text='VCM LOCAL - VIDEO FICTICIO':fontcolor=white:fontsize=22:x=(w-tw)/2:y=(h-th)/2:box=1:boxcolor=black@0.7",
+      "-t", "3", ...filters,
       "-an", "-c:v", "libx264", "-pix_fmt", "yuv420p", "-movflags", "+faststart", file], { cwd: DIRECTORY, encoding: "utf8", windowsHide: true });
     if (result.status !== 0) throw new Error(`No se pudo generar el video sintético con ffmpeg: ${result.error?.message || result.stderr?.slice(-500)}`);
   }
@@ -186,17 +193,19 @@ async function deliverVideo(project, sectionId, link, video) {
 
 async function simulateExpiry(review, project, principal) {
   // Excepción explícita de fixtures: simular el tiempo sin relajar la API ni esperar 21 días.
-  // Sólo una revisión creada por este ejecutor y perteneciente a su proyecto DEMO26.
+  // Sólo una revisión creada por este ejecutor y perteneciente a su proyecto ficticio.
   await withTransaction(async (transaction) => {
     const result = await new sql.Request(transaction).input("reviewId", sql.UniqueIdentifier, review.id)
       .input("projectId", sql.UniqueIdentifier, project.databaseId).input("name", sql.NVarChar(220), project.name)
-      .input("actorId", sql.UniqueIdentifier, principal.id).query(`
+      .input("actorId", sql.UniqueIdentifier, principal.id)
+      .input("projectPattern", sql.NVarChar(32), `${plan.prefix}-%`)
+      .input("actorEmail", sql.NVarChar(320), principal.email).query(`
         UPDATE r SET creado_en=DATEADD(day,-22,SYSUTCDATETIME()), vence_en=DATEADD(day,-1,SYSUTCDATETIME())
         FROM vcm.RevisionSocio r INNER JOIN vcm.Proyecto p ON p.proyecto_id=r.proyecto_id
         INNER JOIN vcm.Usuario u ON u.usuario_id=r.creado_por_usuario_id
         WHERE r.revision_socio_id=@reviewId AND p.proyecto_id=@projectId AND p.nombre=@name
-          AND p.nombre LIKE 'DEMO26-%' AND r.creado_por_usuario_id=@actorId
-          AND u.correo LIKE 'demo.%@example.test' AND r.completado_en IS NULL AND r.revocado_en IS NULL;
+          AND p.nombre LIKE @projectPattern AND r.creado_por_usuario_id=@actorId
+          AND u.correo=@actorEmail AND u.correo LIKE '%@example.test' AND r.completado_en IS NULL AND r.revocado_en IS NULL;
       `);
     assert.equal(result.rowsAffected[0], 1, "No se puede simular el vencimiento de una revisión ajena.");
     await new sql.Request(transaction).input("id", sql.UniqueIdentifier, review.id).query(`
@@ -204,7 +213,7 @@ async function simulateExpiry(review, project, principal) {
     `);
     await writeAudit(transaction, principal, { action: "LOCAL_SHOWCASE_REVIEW_EXPIRED", entity: "RevisionSocio", entityId: review.id,
       description: `Vencimiento simulado exclusivamente para el proyecto ficticio ${project.key}.`,
-      data: { fixture: PREFIX, projectId: project.databaseId, reason: "Ejemplo local de enlace vencido; no modifica hitos ni respuestas." } }, { required: true });
+      data: { fixture: plan.prefix, projectId: project.databaseId, reason: "Ejemplo local de enlace vencido; no modifica hitos ni respuestas." } }, { required: true });
   });
 }
 
@@ -321,7 +330,7 @@ async function populateProject(spec, catalogs, partners, video) {
   if (stage === 13) {
     await step(`${spec.key}/reopened`, async () => {
       await api(`/api/projects/${project.id}/milestones/2/reopen`, { method: "POST", cookie: creator.cookie,
-        body: { sectionId: sections[0].id, reason: "Reapertura ficticia DEMO26 para ejemplificar una corrección docente con trazabilidad y auditoría." } });
+        body: { sectionId: sections[0].id, reason: `Reapertura ficticia ${plan.prefix} para ejemplificar una corrección docente con trazabilidad y auditoría.` } });
       return true;
     });
   }
@@ -333,16 +342,21 @@ function PROJECT_DESCRIPTION(spec) {
 }
 
 function writeGuide(projects) {
-  const lines = ["# Demostración local DEMO26", "", `Generada: ${currentDateInChile()}. Todos los datos son ficticios.`, "",
+  const lines = [`# Demostración local ${plan.prefix}`, "",
+    duoc ? "Escenario simulado con sedes y carreras de Duoc UC. Las personas, secciones, proyectos y socios son ficticios."
+      : "Escenario con datos ficticios.", "",
+    `Fecha de generación ${currentDateInChile()}.`, "",
     `Abrir ${WEB}. Contraseña inicial de las cuentas nuevas: ${PASSWORD}.`, "",
-    "## Cuentas de acceso", "", "| Categoría | Correos | Cantidad |", "| --- | --- | ---: |",
-    "| Administradores | demo.admin001@example.test a demo.admin005@example.test | 5 |",
-    "| Coordinadores CITT | demo.coordinacion001@example.test a demo.coordinacion020@example.test | 20 |",
-    "| Directores | demo.direccion001@example.test a demo.direccion025@example.test | 25 |",
-    "| Docentes | demo.docente001@example.test a demo.docente200@example.test | 200 |", "",
-    "Los coordinadores 001 a 010 tienen también docencia asignada. Las cinco cuentas originales se conservan.", "",
-    "## Proyectos por escenario", "", "| Escenario | Proyecto | Docente / coordinador docente |", "| --- | --- | --- |"];
-  for (const project of projects) lines.push(`| ${project.scenarioLabel} | [${project.id} · ${project.key}](${WEB}/app/proyectos/${project.id}) | ${project.sections.map((section) => section.teacherEmail).join(" / ")} |`);
+    "## Cuentas de ejemplo", "", "| Cargo | Nombre | Correo |", "| --- | --- | --- |"];
+  for (const account of plan.accounts.filter((account) => account.number === 1)) {
+    lines.push(`| ${account.title} | ${account.name} | ${account.email} |`);
+  }
+  lines.push("", "La lista completa de cuentas está en `cuentas.csv`.", "",
+    "## Proyectos por escenario", "", "| Escenario | Proyecto | Asignatura | Docentes |", "| --- | --- | --- | --- |");
+  for (const project of projects) {
+    const subject = plan.subjects.find((item) => item.code === project.subjectCode);
+    lines.push(`| ${project.scenarioLabel} | [${project.id} · ${project.key}](${WEB}/app/proyectos/${project.id}) | ${subject.name} | ${project.sections.map((section) => section.teacherEmail).join(" / ")} |`);
+  }
   lines.push("", "## Enlaces temporales de ejemplo", "", "Cada enlace da acceso sólo a su equipo o revisión. Los vencidos o revocados muestran el rechazo esperado.", "");
   for (const scenario of SCENARIOS.slice(4)) {
     const project = projects.find((p) => p.scenario === scenario.key);
@@ -395,7 +409,7 @@ async function main() {
   const pool = await getPool();
   try {
     await withTransaction(async (transaction) => {
-      // SQL libera el bloqueo al terminar la transacción o desconectarse el proceso.
+      // Ambos escenarios comparten el bloqueo de DEMO26 para poder verificar los datos preexistentes.
       const result = await new sql.Request(transaction).query(`
         DECLARE @result int;
         EXEC @result = sys.sp_getapplock @Resource = N'VCM:DEMO26', @LockMode = 'Exclusive',
@@ -403,8 +417,8 @@ async function main() {
         SELECT @result AS code;
       `);
       const code = result.recordset[0].code;
-      if (code === -1) throw new Error("Ya hay una carga DEMO26 en ejecución.");
-      assert.ok(code >= 0, `No se pudo reservar la carga DEMO26 (SQL ${code}).`);
+      if (code === -1) throw new Error("Ya hay una carga de demostración en ejecución.");
+      assert.ok(code >= 0, `No se pudo reservar la carga ${plan.prefix} (SQL ${code}).`);
       await runShowcase(pool);
     });
   } finally {
@@ -435,10 +449,10 @@ async function runShowcase(pool) {
     const preview = (await api("/api/academic-imports/preview", { method: "POST", cookie: admin.cookie, body: { rows: plan.academicRows } })).data;
     assert.equal(preview.canApply, true, JSON.stringify(preview.issues));
     const result = (await api("/api/academic-imports/apply", { method: "POST", cookie: admin.cookie,
-      body: { filename: "academic-showcase-DEMO26.json", rows: plan.academicRows } })).data;
+      body: { filename: `academic-showcase-${plan.prefix}.json`, rows: plan.academicRows } })).data;
     return { id: result.id, summary: result.summary };
   });
-  console.log("Carga académica ficticia aplicada: 240 secciones y 2.880 estudiantes.");
+  console.log(`Carga académica de ${plan.prefix}: ${plan.projects.length * 3} secciones y ${plan.academicRows.length} estudiantes.`);
   for (const [index, account] of plan.accounts.entries()) {
     await step(`account/${account.email}`, async () => {
       const users = (await api("/api/users", { cookie: admin.cookie })).data;
@@ -447,7 +461,9 @@ async function runShowcase(pool) {
       const result = (await api("/api/users", { method: "POST", cookie: admin.cookie, body: { ...account, password: PASSWORD } })).data;
       return { id: result.id };
     });
-    if ((index + 1) % 25 === 0) console.log(`Cuentas ficticias preparadas: ${index + 1}/250.`);
+    if ((index + 1) % 25 === 0 || index + 1 === plan.accounts.length) {
+      console.log(`Cuentas ficticias preparadas: ${index + 1}/${plan.accounts.length}.`);
+    }
   }
   for (const partner of plan.partners) {
     await step(`partner/${partner.contactEmail}`, async () => {
@@ -462,7 +478,7 @@ async function runShowcase(pool) {
   const projects = [];
   for (const spec of plan.projects) {
     projects.push(await populateProject(spec, catalogs, partners, video));
-    console.log(`Proyecto ${projects.length}/80: ${spec.key} · ${spec.scenarioLabel}.`);
+    console.log(`Proyecto ${projects.length}/${plan.projects.length}: ${spec.key} · ${spec.scenarioLabel}.`);
   }
   writeGuide(projects);
   const report = await verifyShowcase(pool, admin.cookie, projects, true);
@@ -473,7 +489,7 @@ async function runShowcase(pool) {
   saveState();
   console.log("Escenario completo; registros anteriores conservados y estados de hitos comprobados.");
   console.log(JSON.stringify(report, null, 2));
-  console.log("Guía y enlaces de prueba: .local/showcase/GUIA.md");
+  console.log(`Guía y enlaces de prueba: ${stateDirectory}/GUIA.md`);
 }
 
 main().catch((error) => { console.error(error.message); process.exitCode = 1; });

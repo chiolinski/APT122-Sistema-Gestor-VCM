@@ -52,7 +52,8 @@ async function applyAcademicImport(parsed, filename, principal) {
       MERGE vcm.Escuela WITH (HOLDLOCK) AS target
       USING OPENJSON(@payload) WITH (name nvarchar(180) '$.name') AS source
       ON LOWER(target.nombre) = LOWER(source.name)
-      WHEN MATCHED THEN UPDATE SET nombre = source.name, activa = 1, actualizado_en = SYSUTCDATETIME()
+      WHEN MATCHED AND (target.activa = 0 OR CONVERT(varbinary(360), target.nombre) <> CONVERT(varbinary(360), source.name))
+        THEN UPDATE SET nombre = source.name, activa = 1, actualizado_en = SYSUTCDATETIME()
       WHEN NOT MATCHED THEN INSERT (nombre) VALUES (source.name);
     `);
 

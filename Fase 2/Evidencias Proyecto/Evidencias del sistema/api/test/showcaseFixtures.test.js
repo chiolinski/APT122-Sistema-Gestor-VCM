@@ -85,3 +85,26 @@ test("la receta es determinista y permanece separada de los fixtures iniciales",
   assert.ok(plan.academicRows.every((row) => !initialRows.some((initial) => initial.estudiante_rut === row.estudiante_rut
     || initial.asignatura_codigo === row.asignatura_codigo || initial.sede_codigo === row.sede_codigo)));
 });
+
+test("DUOC26 valida la carga y usa identificadores independientes de DEMO26", () => {
+  const standard = buildShowcase();
+  const duoc = buildShowcase({ duoc: true });
+  const parsed = validateAcademicRows(duoc.academicRows);
+  assert.equal(parsed.canApply, true, JSON.stringify(parsed.issues));
+  for (const [key, total] of Object.entries({ schools: 1, campuses: 6, subjects: 16, sections: 48, teachers: 48, students: 576 })) {
+    assert.equal(parsed.summary[key], total);
+  }
+  assert.equal(duoc.projects.length, SCENARIOS.length);
+  assert.deepEqual(duoc.projects.map((project) => project.scenario), SCENARIOS.map((scenario) => scenario.key));
+  assert.ok(duoc.subjects.every((subject) => subject.schoolName === "Informática y Telecomunicaciones"));
+  const legacyEmails = new Set([...standard.accounts.map((account) => account.email), ...standard.academicRows.map((row) => row.estudiante_correo)]);
+  const legacyRuts = new Set(standard.academicRows.map((row) => row.estudiante_rut));
+  const names = [...duoc.accounts.map((account) => account.name), ...duoc.partners.map((partner) => partner.contactName),
+    ...duoc.academicRows.map((row) => row.estudiante_nombre)];
+  assert.equal(new Set(names).size, names.length);
+  assert.ok(names.every((name) => /^\p{L}+ \p{L}+ \p{L}+$/u.test(name)));
+  assert.ok(duoc.accounts.every((account) => /^duoc\..+@example\.test$/.test(account.email) && !legacyEmails.has(account.email)));
+  assert.ok(duoc.academicRows.every((row) => /^duoc\..+@example\.test$/.test(row.estudiante_correo)
+    && !legacyEmails.has(row.estudiante_correo) && !legacyRuts.has(row.estudiante_rut) && isValidRut(row.estudiante_rut)));
+  assert.deepEqual(duoc, buildShowcase({ duoc: true }));
+});

@@ -82,6 +82,7 @@ npm run local:infra          # iniciar contenedores
 npm run local:api            # terminal 1
 npm run dev                  # terminal 2
 npm run local:demo           # opcional: cargar datos de demostración ampliados
+npm run local:demo:duoc      # opcional: cargar el escenario ficticio DUOC26
 npm run local:verify         # aislamiento, lint, tests frontend/API y build
 npm run test:integration     # pruebas de integración con SQL y API locales
 npm run test:performance     # tiempos de respuesta de Seguimiento y Excel

@@ -70,3 +70,17 @@ El avance, enlaces temporales y archivos generados viven en `.local/showcase/`, 
 Se conserva `state.json` para reanudar tras un error. SQL reserva la ejecución para un solo proceso y libera el bloqueo al desconectarse, incluso tras un cierre forzado. Si la API alcanzó a guardar un antecedente antes de registrar el paso en `state.json`, la reanudación verifica su autor y contenido y recupera el mismo archivo. Al repetir una ejecución completada se verifican los datos. Si se pierde el estado y existen entidades DEMO26, el ejecutor se detiene al detectar colisiones. Conserva `state.json` al reanudar.
 
 Los enlaces vencen naturalmente. Las descripciones reflejan el estado al crear la demostración; las pruebas manuales posteriores pueden modificarlo.
+
+## Demostración de Informática y Telecomunicaciones de Duoc UC
+
+Completa la [primera preparación en modo desarrollo](README.md#primera-preparaci%C3%B3n-powershell-desde-esta-carpeta) desde la carpeta `Fase 2/Evidencias Proyecto/Evidencias del sistema`. Instala `ffmpeg` con soporte para H.264 y `ffprobe`, e inicia SQL Server, Azurite, la API local en el puerto 7076 y la web en el puerto 5176. En otra terminal, ejecuta desde la misma carpeta:
+
+```powershell
+npm run local:demo:duoc
+```
+
+DUOC26 agrega 16 proyectos, 48 secciones, 576 estudiantes, 61 cuentas internas y 16 socios simulados. Usa seis sedes reales de Duoc UC y tres carreras de la Escuela de Informática y Telecomunicaciones: Ingeniería en Informática, Analista Programador e Ingeniería en Redes y Telecomunicaciones. El sistema muestra la carrera junto al nombre de la asignatura simulada. [Oferta académica de Duoc UC](https://www.duoc.cl/escuela/informatica-telecomunicaciones/oferta-academica/) y [oferta por sede](https://www.duoc.cl/sedes/plaza-vespucio/).
+
+Los nombres de personas se generan combinando nombres de pila y apellidos. La generación es reproducible para reanudar la carga. Las cuentas y los contactos usan `example.test`. Los socios, la matrícula y los proyectos son simulados.
+
+En Seguimiento, busca `DUOC26` y selecciona el período `2026-2`. Para descargar solo esta selección, usa **Descargar Excel → Vista filtrada**. La guía con cuentas y proyectos se genera en `.local/showcase-duoc/GUIA.md`. DUOC26 guarda su propio estado en esa carpeta y coexiste con DEMO26. Si la carga se interrumpe, vuelve a ejecutar el mismo comando desde el mismo clon y con los mismos volúmenes para reanudarla.

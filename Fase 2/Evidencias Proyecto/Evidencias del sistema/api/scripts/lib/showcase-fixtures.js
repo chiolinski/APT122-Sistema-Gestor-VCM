@@ -50,50 +50,68 @@ function fictionalRut(bodyValue) {
   return `${body}-${check === 11 ? "0" : check === 10 ? "K" : check}`;
 }
 
-function buildShowcase() {
+function buildShowcase({ duoc = false } = {}) {
+  const real = duoc ? require("./duoc-showcase") : null;
+  const prefix = duoc ? "DUOC26" : PREFIX;
+  const emailPrefix = duoc ? "duoc" : "demo";
+  const nameFor = real?.createNameGenerator();
+  const campusNames = real?.CAMPUSES || CAMPUS_NAMES;
+  const themes = real?.CASES.map(([, , theme]) => theme) || PROJECT_THEMES;
   const accounts = [];
   for (const [category, count, role, title] of [
-    ["admin", 5, "ADMIN", "Administrador"],
-    ["coordinacion", 20, "COORDINATOR", "Coordinador CITT"],
-    ["direccion", 25, "COORDINATOR", "Director de Carrera"],
-    ["docente", 200, "TEACHER", "Docente"],
+    ["admin", duoc ? 3 : 5, "ADMIN", "Administrador"],
+    ["coordinacion", duoc ? 8 : 20, "COORDINATOR", "Coordinador CITT"],
+    ["direccion", duoc ? 6 : 25, "COORDINATOR", "Director de Carrera"],
+    ["docente", duoc ? 44 : 200, "TEACHER", "Docente"],
   ]) {
     for (let number = 1; number <= count; number += 1) {
-      accounts.push({ category, number, email: `demo.${category}${pad(number)}@example.test`,
-        name: `${title} ficticio DEMO26 ${pad(number)}`, role, title,
-        ...(role === "TEACHER" ? { teacherSourceId: `${PREFIX}DOC${pad(number)}` } : {}) });
+      accounts.push({ category, number, email: `${emailPrefix}.${category}${pad(number)}@example.test`,
+        name: nameFor ? nameFor(`${category}-${number}`) : `${title} ficticio DEMO26 ${pad(number)}`, role, title,
+        ...(role === "TEACHER" ? { teacherSourceId: `${prefix}DOC${pad(number)}` } : {}) });
     }
   }
   const teachers = accounts.filter((account) => account.role === "TEACHER");
-  const hybrids = accounts.filter((account) => account.category === "coordinacion" && account.number <= 10)
-    .map((account) => ({ ...account, teacherSourceId: `${PREFIX}HIB${pad(account.number)}` }));
+  const coordinators = accounts.filter((account) => account.category === "coordinacion");
+  const hybrids = coordinators.slice(0, duoc ? 4 : 10)
+    .map((account) => ({ ...account, teacherSourceId: `${prefix}HIB${pad(account.number)}` }));
   const teachingAccounts = [...teachers, ...hybrids];
-  const campuses = CAMPUS_NAMES.map((name, index) => ({ code: `${PREFIX}S${pad(index + 1, 2)}`, name: `Sede ficticia DEMO26 ${name}` }));
-  const subjects = SUBJECT_NAMES.map((name, index) => ({ code: `${PREFIX}A${pad(index + 1, 2)}`,
-    name: `DEMO26 · ${name}`, schoolName: `Escuela ficticia DEMO26 de ${SCHOOL_NAMES[index % SCHOOL_NAMES.length]}` }));
-  const partners = Array.from({ length: 40 }, (_, index) => ({
-    taxId: fictionalRut(98001001 + index), businessName: `Organización ficticia DEMO26 ${pad(index + 1)} · ${CAMPUS_NAMES[index % 10]}`,
-    industry: SCHOOL_NAMES[index % SCHOOL_NAMES.length], contactName: `Contacto ficticio DEMO26 ${pad(index + 1)}`,
-    contactEmail: `demo.socio${pad(index + 1)}@example.test`, phone: "",
+  const campuses = campusNames.map((name, index) => ({ code: `${prefix}S${pad(index + 1, 2)}`, name: duoc ? name : `Sede ficticia DEMO26 ${name}` }));
+  const subjects = SUBJECT_NAMES.map((name, index) => {
+    const [career, course] = real?.CASES[index] || [];
+    return { code: `${prefix}A${pad(index + 1, 2)}`,
+      name: real ? `${real.CAREERS[career]} · ${course}` : `DEMO26 · ${name}`,
+      schoolName: real?.SCHOOL_NAME || `Escuela ficticia DEMO26 de ${SCHOOL_NAMES[index % SCHOOL_NAMES.length]}` };
+  });
+  const partnerTypes = ["Biblioteca comunitaria", "Agrupación vecinal", "Cooperativa de oficios", "Centro cultural"];
+  const partners = Array.from({ length: duoc ? 16 : 40 }, (_, index) => ({
+    taxId: fictionalRut((duoc ? 98101001 : 98001001) + index),
+    businessName: duoc
+      ? `${partnerTypes[index % partnerTypes.length]} Horizonte ${pad(index + 1, 2)} (simulada)`
+      : `Organización ficticia DEMO26 ${pad(index + 1)} · ${CAMPUS_NAMES[index % 10]}`,
+    industry: duoc ? "Comunidad y desarrollo local" : SCHOOL_NAMES[index % SCHOOL_NAMES.length],
+    contactName: nameFor ? nameFor(`socio-${index}`) : `Contacto ficticio DEMO26 ${pad(index + 1)}`,
+    contactEmail: `${emailPrefix}.socio${pad(index + 1)}@example.test`, phone: "",
   }));
   const projects = [];
   const academicRows = [];
-  for (let repetition = 0; repetition < 5; repetition += 1) {
+  for (let repetition = 0; repetition < (duoc ? 1 : 5); repetition += 1) {
     for (const [scenarioIndex, scenario] of SCENARIOS.entries()) {
       const number = projects.length + 1;
       const subject = subjects[scenarioIndex];
-      const project = { key: `${PREFIX}-${pad(number)}`, number, repetition, scenarioIndex, scenario: scenario.key,
+      const project = { key: `${prefix}-${pad(number)}`, number, repetition, scenarioIndex, scenario: scenario.key,
         scenarioLabel: scenario.label, subjectCode: subject.code, partnerEmail: partners[(number - 1) % partners.length].contactEmail,
-        creatorEmail: `demo.coordinacion${pad((number - 1) % 20 + 1)}@example.test`,
-        name: `${PREFIX}-${pad(number)} · ${PROJECT_THEMES[scenarioIndex]} · ${scenario.label}`,
-        description: `Caso enteramente ficticio para demostración local. ${scenario.label}. Se trabajan tres secciones de ${subject.name} con un socio ficticio. No representa personas ni organizaciones reales.`,
-        expectedResult: `Prototipo y material de demostración de ${PROJECT_THEMES[scenarioIndex].toLowerCase()}, con evidencias sintéticas y retroalimentación ficticia.`,
+        creatorEmail: coordinators[(number - 1) % coordinators.length].email,
+        name: `${prefix}-${pad(number)} · ${themes[scenarioIndex]} · ${scenario.label}`,
+        description: duoc
+          ? `Caso simulado de Vinculación con el Medio. ${scenario.label}. Tres secciones de ${subject.name} trabajan con un socio simulado.`
+          : `Caso enteramente ficticio para demostración local. ${scenario.label}. Se trabajan tres secciones de ${subject.name} con un socio ficticio. No representa personas ni organizaciones reales.`,
+        expectedResult: `Prototipo y material de demostración de ${themes[scenarioIndex].toLowerCase()}, con evidencias sintéticas y retroalimentación ficticia.`,
         sections: [] };
       for (let sectionIndex = 0; sectionIndex < 3; sectionIndex += 1) {
         const ordinal = (number - 1) * 3 + sectionIndex;
         const teacher = teachingAccounts[ordinal % teachingAccounts.length];
         const campus = campuses[(number - 1 + sectionIndex) % campuses.length];
-        const section = { code: `D${pad(number)}${sectionIndex + 1}D`, campusCode: campus.code,
+        const section = { code: `${duoc ? "UC" : "D"}${pad(number)}${sectionIndex + 1}D`, campusCode: campus.code,
           teacherEmail: teacher.email, teacherSourceId: teacher.teacherSourceId, students: [] };
         for (let studentIndex = 0; studentIndex < 12; studentIndex += 1) {
           const studentNumber = ordinal * 12 + studentIndex + 1;
@@ -101,9 +119,9 @@ function buildShowcase() {
             asignatura_codigo: subject.code, asignatura_nombre: subject.name, escuela_nombre: subject.schoolName,
             seccion_codigo: section.code, jornada: sectionIndex === 2 ? "Vespertina" : "Diurna",
             docente_id: teacher.teacherSourceId, docente_nombre: teacher.name, docente_correo: teacher.email,
-            estudiante_id: `${PREFIX}ALU${pad(studentNumber, 4)}`, estudiante_rut: fictionalRut(91010000 + studentNumber),
-            estudiante_nombre: `Estudiante ficticio DEMO26 ${pad(studentNumber, 4)}`,
-            estudiante_correo: `demo.estudiante${pad(studentNumber, 4)}@example.test` };
+            estudiante_id: `${prefix}ALU${pad(studentNumber, 4)}`, estudiante_rut: fictionalRut((duoc ? 91110000 : 91010000) + studentNumber),
+            estudiante_nombre: nameFor ? nameFor(`estudiante-${studentNumber}`) : `Estudiante ficticio DEMO26 ${pad(studentNumber, 4)}`,
+            estudiante_correo: `${emailPrefix}.estudiante${pad(studentNumber, 4)}@example.test` };
           academicRows.push(row);
           section.students.push({ email: row.estudiante_correo, rut: row.estudiante_rut });
         }
@@ -112,7 +130,7 @@ function buildShowcase() {
       projects.push(project);
     }
   }
-  return { version: 1, prefix: PREFIX, accounts, campuses, subjects, partners, projects, academicRows };
+  return { version: 1, prefix, accounts, campuses, subjects, partners, projects, academicRows };
 }
 
 function buildAssignment(roster, sectionId) {
