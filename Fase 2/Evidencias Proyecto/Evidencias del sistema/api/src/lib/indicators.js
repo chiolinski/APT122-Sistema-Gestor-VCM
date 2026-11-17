@@ -20,6 +20,8 @@ function normalizePeriod(value) {
   return period;
 }
 
+// Métrica M8
+// Valoración del socio = suma / cantidad de notas; con menos de 3 muestra 'Muestra insuficiente'.
 function buildPartnerRating(row = {}) {
   const count = Number(row.evaluations) || 0;
   const sum = Number(row.ratingSum) || 0;
@@ -34,13 +36,25 @@ function buildProject(row = {}) {
     code: row.code,
     name: row.name,
     school: row.school || "Sin escuela",
+    // Métrica M1
+    // Participación = asignados / (participaciones - desertores).
     participation: ratio(row.assigned, participations - dropped),
+    // Métrica M2
+    // Deserción = desertores / participaciones.
     dropout: ratio(dropped, participations),
+    // Métrica M4
+    // Avance de hitos = secciones con el hito completado / total de secciones.
     milestones: [1, 2].map((milestone) => ({
       milestone, ...ratio(row[MILESTONE_FIELDS[milestone]], row.sections),
     })),
+    // Métrica M4
+    // Cierre = secciones cerradas (Finalizado) / total de secciones.
     closure: ratio(row.closedSections, row.sections),
+    // Métrica M6
+    // Entrega de videos = equipos con video / total de equipos.
     videoDelivery: ratio(row.videos, row.teams),
+    // Métrica M7
+    // Respuesta del socio = revisiones respondidas / enviadas (sin cierres internos).
     partnerResponse: ratio(row.reviewsAnswered, row.reviewsSent),
     partnerRating: buildPartnerRating(row),
   };
@@ -69,6 +83,8 @@ function summarizeRating(rows, projects) {
   };
 }
 
+// Métrica M10
+// Distribución por escuela = proyectos de la escuela / total de proyectos.
 function buildSchoolDistribution(rows = []) {
   const total = rows.reduce((sum, row) => sum + (Number(row.projects) || 0), 0);
   const schools = rows.map((row) => ({

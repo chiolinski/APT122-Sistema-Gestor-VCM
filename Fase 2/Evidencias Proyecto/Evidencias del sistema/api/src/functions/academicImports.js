@@ -8,6 +8,8 @@ app.http("previewAcademicImport", {
   methods: ["POST"], authLevel: "anonymous", route: "academic-imports/preview",
   handler: async (request, context) => {
     try {
+      // Seguridad 8
+      // Solo el administrador puede usar esta función.
       await requireAdmin(request);
       const body = await readJson(request);
       return ok(validateAcademicRows(body.rows));

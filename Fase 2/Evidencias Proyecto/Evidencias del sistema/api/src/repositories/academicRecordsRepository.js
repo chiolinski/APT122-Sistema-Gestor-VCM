@@ -186,6 +186,8 @@ async function updateAcademicRecord(entity, id, input, principal) {
       return { id, updated: true };
     });
   } catch (error) {
+    // Regla de negocio 38
+    // Un valor académico en uso no se elimina.
     if ([2601, 2627].includes(error.number)) {
       throw new AppError(409, "ACADEMIC_VALUE_IN_USE", "El código, RUT o identificador ya está utilizado por otro registro.");
     }

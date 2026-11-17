@@ -21,6 +21,8 @@ const PROJECT_SECTIONS = `
   WHERE period.codigo = @period AND project.estado <> 'CANCELADO'
 `;
 
+// Métrica filtro
+// Solo cuentan proyectos EN_EJECUCION o FINALIZADO; M7 excluye los cierres internos.
 const PROJECT_INDICATORS_QUERY = `
   WITH projectSections AS (
     SELECT proyecto_id, seccion_id, asignatura_id FROM (${PROJECT_SECTIONS}) ps

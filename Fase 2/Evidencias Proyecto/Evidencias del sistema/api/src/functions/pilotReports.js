@@ -6,6 +6,8 @@ const { getPilotOverview, getPilotReport, listAuditEvents } = require("../reposi
 app.http("pilotOverview", {
   methods: ["GET"], authLevel: "anonymous", route: "pilot-reports/overview",
   handler: async (request, context) => {
+    // Seguridad 8
+    // Solo el administrador puede usar esta función.
     try { await requireAdmin(request); return ok(await getPilotOverview()); }
     catch (error) { return handleError(error, context); }
   },

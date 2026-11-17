@@ -9,6 +9,8 @@ function adminEndpoint(name, methods, route, operation) {
   app.http(name, { methods, authLevel: "anonymous", route,
     handler: async (request, context) => {
       try {
+        // Seguridad 8
+        // Solo el administrador puede usar esta función.
         const principal = await requireAdmin(request);
         return ok(await operation(request, principal));
       } catch (error) { return handleError(error, context); }

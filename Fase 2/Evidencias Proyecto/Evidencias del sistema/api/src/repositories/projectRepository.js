@@ -114,6 +114,8 @@ async function assertTeacherSectionAccess(connection, projectId, sectionId, prin
             )
         );
     `);
+  // Seguridad 7
+  // El docente solo accede a sus propias secciones y proyectos.
   if (!result.recordset[0]) {
     throw new AppError(403, "SECTION_ACCESS_DENIED", "No tienes permiso para modificar esta sección del proyecto.");
   }
@@ -460,6 +462,8 @@ async function assertSectionRosterEditable(connection, sectionId) {
       WHERE projectSection.seccion_id = @sectionId
         AND (project.estado IN ('FINALIZADO', 'CANCELADO') OR milestoneThree.estado = 'COMPLETADO');
     `);
+  // Regla de negocio 7
+  // Una sección cerrada no se modifica.
   if (result.recordset[0]) {
     throw new AppError(409, "SECTION_ROSTER_LOCKED", `La nómina no puede modificarse porque la sección ya fue cerrada en el proyecto ${result.recordset[0].projectCode}.`);
   }
@@ -468,6 +472,8 @@ async function assertSectionRosterEditable(connection, sectionId) {
 async function addProjectStudent(publicCode, input, principal) {
   return withTransaction(async (transaction) => {
     const project = await getTeacherProject(transaction, publicCode, principal, true);
+    // Regla de negocio 6
+    // Un proyecto cancelado o que ya no está en ejecución no admite cambios.
     if (["FINALIZADO", "CANCELADO"].includes(project.status)) {
       throw new AppError(409, "PROJECT_NOT_EDITABLE", "El proyecto ya no permite modificar la nómina de sus secciones.");
     }
@@ -504,6 +510,8 @@ async function addProjectStudent(publicCode, input, principal) {
     if (existingEnrollment?.active && existingEnrollment.sectionId === input.sectionId) {
       throw new AppError(409, "STUDENT_ALREADY_ENROLLED", "El estudiante ya pertenece a esta sección.");
     }
+    // Regla de negocio 14
+    // Un alumno solo puede tener una matrícula vigente por asignatura.
     if (existingEnrollment?.active) {
       throw new AppError(409, "STUDENT_ENROLLED_OTHER_SECTION", `El estudiante ya tiene una matrícula vigente en la sección ${existingEnrollment.sectionCode}. Retíralo allí antes de agregarlo a esta sección.`);
     }
@@ -564,6 +572,8 @@ async function removeProjectStudent(publicCode, studentId, input, principal) {
   }
   return withTransaction(async (transaction) => {
     const project = await getTeacherProject(transaction, publicCode, principal, true);
+    // Regla de negocio 6
+    // Un proyecto cancelado o que ya no está en ejecución no admite cambios.
     if (["FINALIZADO", "CANCELADO"].includes(project.status)) {
       throw new AppError(409, "PROJECT_NOT_EDITABLE", "El proyecto ya no permite modificar la nómina de sus secciones.");
     }
@@ -571,6 +581,8 @@ async function removeProjectStudent(publicCode, studentId, input, principal) {
     await assertSectionRosterEditable(transaction, input.sectionId);
     const roster = await queryTeacherRoster(transaction, project.id, principal, input.sectionId);
     const student = roster.find((item) => item.id === studentId);
+    // Regla de negocio 12
+    // Solo se asignan estudiantes de la nómina vigente de la sección.
     if (!student) {
       throw new AppError(404, "STUDENT_NOT_IN_ROSTER", "El estudiante no pertenece a la nómina vigente de esta sección.");
     }
@@ -633,6 +645,8 @@ async function removeProjectStudent(publicCode, studentId, input, principal) {
 async function scheduleMilestoneTwo(publicCode, input, principal) {
   await withTransaction(async (transaction) => {
     const project = await getProject(transaction, publicCode, true);
+    // Regla de negocio 6
+    // Un proyecto cancelado o que ya no está en ejecución no admite cambios.
     if (["FINALIZADO", "CANCELADO"].includes(project.status)) {
       throw new AppError(409, "PROJECT_NOT_SCHEDULABLE", "El proyecto ya no permite programar el Hito 2.");
     }
@@ -653,12 +667,18 @@ async function scheduleMilestoneTwo(publicCode, input, principal) {
             THEN CAST(1 AS bit) ELSE CAST(0 AS bit) END AS dateInPast;
       `);
     const state = readiness.recordset[0];
+    // Regla de negocio 1
+    // Todas las secciones deben completar el Hito 1 antes de programar o iniciar el Hito 2.
     if (state.milestoneOneStatus !== "COMPLETADO") {
       throw new AppError(409, "MILESTONE_ONE_INCOMPLETE", "Todas las secciones deben completar el Hito 1 antes de programar el Hito 2.");
     }
+    // Regla de negocio 2
+    // La fecha del Hito 2 no se puede cambiar si ya empezaron sus entregas.
     if (state.milestoneTwoCompletedSections > 0 || state.videoDeliveryStarted) {
       throw new AppError(409, "MILESTONE_TWO_ALREADY_STARTED", "La fecha ya no puede modificarse porque ya se iniciaron las entregas del Hito 2.");
     }
+    // Regla de negocio 3
+    // La fecha de apertura de un hito no puede quedar en el pasado.
     if (state.dateInPast) {
       throw new AppError(400, "MILESTONE_DATE_IN_PAST", "La fecha de apertura no puede estar en el pasado.");
     }
@@ -688,6 +708,8 @@ async function scheduleMilestoneTwo(publicCode, input, principal) {
 async function reopenSectionMilestone(publicCode, input, principal) {
   await withTransaction(async (transaction) => {
     const project = await getProject(transaction, publicCode, true);
+    // Regla de negocio 6
+    // Un proyecto cancelado o que ya no está en ejecución no admite cambios.
     if (project.status === "CANCELADO") {
       throw new AppError(409, "PROJECT_CANCELLED", "No se pueden reabrir hitos de un proyecto cancelado.");
     }
@@ -701,6 +723,8 @@ async function reopenSectionMilestone(publicCode, input, principal) {
         FROM vcm.HitoProyectoSeccion WITH (UPDLOCK, HOLDLOCK)
         WHERE proyecto_id = @projectId AND seccion_id = @sectionId AND numero = @number;
       `);
+    // Regla de negocio 5
+    // Reapertura: solo se reabre un hito completado, con motivo de al menos 10 caracteres; sin reabrirlo no se corrige.
     if (milestone.recordset[0]?.status !== "COMPLETADO") {
       throw new AppError(409, "MILESTONE_NOT_COMPLETED", "Sólo se puede reabrir un hito que esté completado.");
     }
@@ -759,6 +783,8 @@ async function reopenSectionMilestone(publicCode, input, principal) {
 async function startProject(publicCode, assignment, principal) {
   const result = await withTransaction(async (transaction) => {
     const project = await getTeacherProject(transaction, publicCode, principal, true);
+    // Regla de negocio 6
+    // Un proyecto cancelado o que ya no está en ejecución no admite cambios.
     if (!["PLANIFICADO", "EN_EJECUCION"].includes(project.status)) {
       throw new AppError(409, "PROJECT_NOT_EDITABLE", "El proyecto ya no permite modificar sus equipos.");
     }
@@ -772,6 +798,8 @@ async function startProject(publicCode, assignment, principal) {
         SELECT estado AS status FROM vcm.HitoProyectoSeccion WITH (UPDLOCK, HOLDLOCK)
         WHERE proyecto_id = @projectId AND seccion_id = @sectionId AND numero = 1;
       `);
+    // Regla de negocio 5
+    // Reapertura: solo se reabre un hito completado, con motivo de al menos 10 caracteres; sin reabrirlo no se corrige.
     if (sectionMilestone.recordset[0]?.status === "COMPLETADO") {
       throw new AppError(409, "MILESTONE_REOPEN_REQUIRED", "Coordinación debe reabrir el Hito 1 antes de modificar los equipos de esta sección.");
     }
@@ -926,6 +954,8 @@ async function updateProjectStudentAssignment(publicCode, studentId, input, prin
   }
   return withTransaction(async (transaction) => {
     const project = await getTeacherProject(transaction, publicCode, principal, true);
+    // Regla de negocio 6
+    // Un proyecto cancelado o que ya no está en ejecución no admite cambios.
     if (["FINALIZADO", "CANCELADO"].includes(project.status)) {
       throw new AppError(409, "PROJECT_NOT_EDITABLE", "El proyecto ya no permite modificar el estado de sus estudiantes.");
     }
@@ -940,15 +970,21 @@ async function updateProjectStudentAssignment(publicCode, studentId, input, prin
       `);
     const milestoneOne = milestones.recordset.find((milestone) => milestone.number === 1);
     const milestoneThree = milestones.recordset.find((milestone) => milestone.number === 3);
+    // Regla de negocio 13
+    // Los estudiantes se editan uno a uno solo después de completar el Hito 1.
     if (milestoneOne?.status !== "COMPLETADO") {
       throw new AppError(409, "MILESTONE_ONE_REQUIRED", "Completa primero el Hito 1 de la sección para editar estudiantes individualmente.");
     }
+    // Regla de negocio 7
+    // Una sección cerrada no se modifica.
     if (milestoneThree?.status === "COMPLETADO") {
       throw new AppError(409, "SECTION_ALREADY_CLOSED", "La sección ya está cerrada y no permite modificar estudiantes.");
     }
 
     const roster = await queryTeacherRoster(transaction, project.id, principal, input.sectionId);
     const student = roster.find((item) => item.id === studentId);
+    // Regla de negocio 12
+    // Solo se asignan estudiantes de la nómina vigente de la sección.
     if (!student) {
       throw new AppError(404, "STUDENT_NOT_IN_ROSTER", "El estudiante no pertenece a la nómina vigente de esta sección.");
     }
@@ -983,6 +1019,8 @@ async function updateProjectStudentAssignment(publicCode, studentId, input, prin
             SELECT COUNT(*) AS total FROM vcm.Equipo WITH (UPDLOCK, HOLDLOCK)
             WHERE proyecto_id = @projectId AND seccion_id = @sectionId;
           `);
+        // Regla de negocio 8
+        // Cada sección puede tener entre 1 y 20 equipos.
         if (countResult.recordset[0].total >= 20) {
           throw new AppError(409, "TEAM_LIMIT_REACHED", "La sección ya tiene el máximo de 20 equipos.");
         }
@@ -1048,6 +1086,8 @@ async function updateProjectStudentAssignment(publicCode, studentId, input, prin
 async function saveProjectProgress(publicCode, progress, principal) {
   await withTransaction(async (transaction) => {
     const project = await getTeacherProject(transaction, publicCode, principal, true);
+    // Regla de negocio 1
+    // Todas las secciones deben completar el Hito 1 antes de programar o iniciar el Hito 2.
     if (project.status !== "EN_EJECUCION") {
       throw new AppError(409, "PROJECT_NOT_IN_PROGRESS", "Debes completar el Hito 1 antes de registrar avances.");
     }
@@ -1067,12 +1107,18 @@ async function saveProjectProgress(publicCode, progress, principal) {
         WHERE milestoneOne.proyecto_id = @projectId AND milestoneOne.numero = 1;
       `);
     const milestoneAvailability = availability.recordset[0];
+    // Regla de negocio 1
+    // Todas las secciones deben completar el Hito 1 antes de programar o iniciar el Hito 2.
     if (milestoneAvailability?.milestoneOneStatus !== "COMPLETADO") {
       throw new AppError(409, "PROJECT_MILESTONE_ONE_REQUIRED", "Todas las secciones deben completar el Hito 1 antes de iniciar el Hito 2.");
     }
+    // Regla de negocio 15
+    // El Hito 2 queda bloqueado hasta que coordinación lo programa y llega su fecha de apertura.
     if (!milestoneAvailability.availableFrom) {
       throw new AppError(409, "MILESTONE_TWO_NOT_SCHEDULED", "Coordinación todavía no ha programado la apertura del Hito 2.");
     }
+    // Regla de negocio 15
+    // El Hito 2 queda bloqueado hasta que coordinación lo programa y llega su fecha de apertura.
     if (!milestoneAvailability.available) {
       throw new AppError(409, "MILESTONE_TWO_NOT_OPEN", `El Hito 2 estará disponible desde el ${milestoneAvailability.availableFrom}.`, {
         availableFrom: milestoneAvailability.availableFrom,
@@ -1086,9 +1132,13 @@ async function saveProjectProgress(publicCode, progress, principal) {
         SELECT numero AS number, estado AS status FROM vcm.HitoProyectoSeccion WITH (UPDLOCK, HOLDLOCK)
         WHERE proyecto_id = @projectId AND seccion_id = @sectionId AND numero IN (1, 2);
       `);
+    // Regla de negocio 1
+    // Todas las secciones deben completar el Hito 1 antes de programar o iniciar el Hito 2.
     if (sectionMilestones.recordset.find((milestone) => milestone.number === 1)?.status !== "COMPLETADO") {
       throw new AppError(409, "SECTION_MILESTONE_ONE_REQUIRED", "Debes completar el Hito 1 de esta sección antes de registrar su avance.");
     }
+    // Regla de negocio 5
+    // Reapertura: solo se reabre un hito completado, con motivo de al menos 10 caracteres; sin reabrirlo no se corrige.
     if (sectionMilestones.recordset.find((milestone) => milestone.number === 2)?.status === "COMPLETADO") {
       throw new AppError(409, "MILESTONE_REOPEN_REQUIRED", "Coordinación debe reabrir el Hito 2 antes de corregir este avance.");
     }
@@ -1138,6 +1188,8 @@ async function saveProjectProgress(publicCode, progress, principal) {
 async function closeProject(publicCode, sectionId, principal) {
   await withTransaction(async (transaction) => {
     const project = await getTeacherProject(transaction, publicCode, principal, true);
+    // Regla de negocio 4
+    // Una sección solo se cierra con el Hito 2 completado.
     if (project.status !== "EN_EJECUCION") {
       throw new AppError(409, "PROJECT_NOT_IN_PROGRESS", "La sección no está disponible para cierre.");
     }
@@ -1151,9 +1203,13 @@ async function closeProject(publicCode, sectionId, principal) {
         FROM vcm.HitoProyectoSeccion WITH (UPDLOCK, HOLDLOCK)
         WHERE proyecto_id = @projectId AND seccion_id = @sectionId AND numero IN (2, 3);
       `);
+    // Regla de negocio 4
+    // Una sección solo se cierra con el Hito 2 completado.
     if (milestones.recordset.find((milestone) => milestone.number === 2)?.status !== "COMPLETADO") {
       throw new AppError(409, "MILESTONE_TWO_REQUIRED", "Debes completar el Hito 2 de esta sección antes de cerrarla.");
     }
+    // Regla de negocio 5
+    // Reapertura: solo se reabre un hito completado, con motivo de al menos 10 caracteres; sin reabrirlo no se corrige.
     if (milestones.recordset.find((milestone) => milestone.number === 3)?.status === "COMPLETADO") {
       throw new AppError(409, "MILESTONE_REOPEN_REQUIRED", "Coordinación debe reabrir el Hito 3 antes de volver a cerrar esta sección.");
     }
@@ -1288,6 +1344,8 @@ async function updateProject(publicCode, input, principal) {
     const currentSections = currentResult.recordset;
     const removedSections = currentSections.filter((section) => !nextSectionIds.has(section.id.toLowerCase()));
     const protectedSections = getProtectedRemovedSectionIds(currentSections, input.sectionIds);
+    // Regla de negocio 34
+    // No se ajustan secciones cerradas ni se quitan secciones con actividad.
     if (protectedSections.length) {
       throw new AppError(409, "PROJECT_SECTIONS_HAVE_ACTIVITY", "No puedes quitar secciones que ya tienen equipos, archivos, avances o hitos completados.", { sectionIds: protectedSections });
     }

@@ -1,6 +1,8 @@
 const LOCAL_DATABASE = "vcm_piloto_2026_local";
 const LOCAL_VIDEO_URL = "http://127.0.0.1:10000/devstoreaccount1";
 
+// Seguridad 13
+// Aislamiento local: solo se permite el SQL y el Azurite de pruebas.
 function assertSqlTarget(config, { allowMaster = false } = {}) {
   const allowedDatabase = config.database === LOCAL_DATABASE || (allowMaster && config.database === "master");
   if (config.server !== "127.0.0.1" || config.port !== 14333 || !allowedDatabase || config.options?.instanceName

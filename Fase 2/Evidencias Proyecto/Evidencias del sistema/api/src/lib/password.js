@@ -4,7 +4,11 @@ const { AppError } = require("./http");
 
 const scrypt = promisify(crypto.scrypt);
 const KEY_LENGTH = 64;
+// Seguridad 1
+// Las contraseñas se guardan con scrypt (N=16384, r=8, p=1) y sal aleatoria.
 const SCRYPT_OPTIONS = { N: 16384, r: 8, p: 1, maxmem: 64 * 1024 * 1024 };
+// Seguridad 2
+// Comparación en tiempo constante y hash ficticio para no revelar si el usuario existe.
 const DUMMY_HASH = "scrypt$16384$8$1$745304c8759cc28c1b2d9a97e231ce04$73e1aa0cf0b62bb104af751a0a89020b4ae16a6ae76fb039aa0c07e277624907a4e571bef13cff3c12b64f620082fc6d929710ec6c5b84d4f4432f3f820d8983";
 
 function validatePassword(password) {
@@ -31,6 +35,8 @@ async function verifyPassword(password, storedHash = DUMMY_HASH) {
     const key = await scrypt(password, salt, expected.length, {
       N: Number(n), r: Number(r), p: Number(p), maxmem: 64 * 1024 * 1024,
     });
+    // Seguridad 2
+    // Comparación en tiempo constante y hash ficticio para no revelar si el usuario existe.
     return expected.length === key.length && crypto.timingSafeEqual(expected, key);
   } catch {
     return false;

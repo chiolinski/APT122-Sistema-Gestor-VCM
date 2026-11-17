@@ -8,6 +8,8 @@ app.http("listAcademicRecords", {
   methods: ["GET"], authLevel: "anonymous", route: "academic-records/{entity}",
   handler: async (request, context) => {
     try {
+      // Seguridad 8
+      // Solo el administrador puede usar esta función.
       await requireAdmin(request);
       const url = new URL(request.url);
       return ok(await listAcademicRecords(

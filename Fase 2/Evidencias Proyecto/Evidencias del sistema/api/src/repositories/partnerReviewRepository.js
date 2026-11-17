@@ -203,6 +203,8 @@ async function closeSectionPartnerReview(publicCode, sectionId, reviewId, princi
     // No expiry filter: an expired invitation can still be closed internally.
     // The project/section locks serialize closure with publication and team changes.
     const review = await getSectionFeedback(transaction, access.projectId, sectionId, { lock: true });
+    // Regla de negocio 17
+    // El docente debe confirmar que revisó la retroalimentación del socio.
     if (!review || review.id.toLowerCase() !== reviewId.toLowerCase()) {
       throw new AppError(409, "FEEDBACK_CHANGED", "La revisión cambió o fue revocada. Actualiza antes de cerrar.");
     }
@@ -220,6 +222,8 @@ async function closeSectionPartnerReview(publicCode, sectionId, reviewId, princi
         OUTPUT CONVERT(varchar(19), inserted.completado_en, 126) + 'Z' AS completedAt
         WHERE revision_socio_id = @id AND completado_en IS NULL AND revocado_en IS NULL;
       `);
+    // Regla de negocio 17
+    // El docente debe confirmar que revisó la retroalimentación del socio.
     if (!result.recordset[0]) throw new AppError(409, "FEEDBACK_CHANGED", "La revisión cambió. Actualiza antes de cerrar.");
     const evaluatedCount = review.evaluations.length;
     await writeAudit(transaction, principal, {

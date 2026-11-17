@@ -10,6 +10,8 @@ const { VIDEO_MAX_BYTES, buildDeliveryBlobName, validateVideoUpload, signVideoUp
 async function assertDeliveryOpen(connection, code, sectionId, principal) {
   const access = await getHitoTwoAccess(connection, code, sectionId, principal, true);
   assertHitoTwoOpen(access);
+  // Regla de negocio 23
+  // Una entrega ya enviada al socio no se reemplaza y solo hay una carga a la vez.
   if (await getSectionFeedback(connection, access.projectId, sectionId, { lock: true })) {
     throw new AppError(409, "VIDEO_DELIVERY_PUBLISHED", "Los videos ya fueron enviados al socio formador. Coordinación debe revocar esa revisión antes de permitir nuevas entregas.");
   }
@@ -20,10 +22,14 @@ async function createVideoDeliveryLinks(publicCode, sectionId, principal) {
   return withTransaction(async (transaction) => {
     const access = await assertDeliveryOpen(transaction, publicCode, sectionId, principal);
     const teams = await getSectionTeams(transaction, access.projectId, sectionId, true);
+    // Regla de negocio 24
+    // La revisión del socio solo se crea con equipos que tienen video.
     if (!teams.length) throw new AppError(409, "REVIEW_WITHOUT_TEAMS", "Primero deben conformarse los equipos.");
     const links = [];
     for (const team of teams) {
       const token = createReviewToken();
+      // Regla de negocio 22
+      // El enlace de entrega de video dura 90 días y cada intento de carga 15 minutos.
       const result = await new sql.Request(transaction).input("projectId", sql.UniqueIdentifier, access.projectId)
         .input("sectionId", sql.UniqueIdentifier, sectionId).input("teamId", sql.UniqueIdentifier, team.id)
         .input("hash", sql.Char(64), hashReviewToken(token)).query(`
@@ -95,6 +101,8 @@ async function beginVideoUpload(token, payload) {
   const attempt = await withTransaction(async (transaction) => {
     const { delivery, access } = await studentContext(transaction, token, true);
     if (delivery.pendingBlob && Date.parse(delivery.attemptExpiresAt) > Date.now()) {
+      // Regla de negocio 23
+      // Una entrega ya enviada al socio no se reemplaza y solo hay una carga a la vez.
       if (delivery.pendingName !== input.name || Number(delivery.expectedSize) !== input.size) {
         throw new AppError(409, "VIDEO_UPLOAD_IN_PROGRESS", "Ya hay una carga en curso. Confírmala o espera 15 minutos antes de seleccionar otro archivo.");
       }
@@ -123,11 +131,15 @@ async function confirmVideoUpload(token, attemptId) {
   if (!delivery.attemptId || delivery.attemptId.toLowerCase() !== String(attemptId || "").toLowerCase()) {
     throw new AppError(409, "VIDEO_UPLOAD_CHANGED", "El intento de carga no coincide. Actualiza el enlace de entrega.");
   }
+  // Regla de negocio 22
+  // El enlace de entrega de video dura 90 días y cada intento de carga 15 minutos.
   if (Date.parse(delivery.attemptExpiresAt) <= Date.now()) throw new AppError(409, "VIDEO_UPLOAD_EXPIRED", "El intento de carga venció. Inicia uno nuevo.");
   await verifyVideoUpload(delivery.pendingBlob, Number(delivery.expectedSize));
   return withTransaction(async (transaction) => {
     const current = await studentContext(transaction, token, true);
     if (current.delivery.attemptId !== delivery.attemptId) throw new AppError(409, "VIDEO_UPLOAD_CHANGED", "La carga cambió. Actualiza el enlace.");
+    // Regla de negocio 22
+    // El enlace de entrega de video dura 90 días y cada intento de carga 15 minutos.
     if (Date.parse(current.delivery.attemptExpiresAt) <= Date.now()) throw new AppError(409, "VIDEO_UPLOAD_EXPIRED", "El intento de carga venció. Inicia uno nuevo.");
     const result = await new sql.Request(transaction).input("id", sql.UniqueIdentifier, delivery.id).query(`
       UPDATE vcm.EntregaVideoEquipo SET blob_confirmado = blob_pendiente, archivo_nombre = nombre_pendiente,

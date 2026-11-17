@@ -6,6 +6,8 @@ const { listBulkReviewPeriods, previewBulkReviewClosure, closeBulkPartnerReviews
 app.http("bulkPartnerReviewPeriods", {
   methods: ["GET"], authLevel: "anonymous", route: "partner-reviews/bulk-close/periods",
   handler: async (request, context) => {
+    // Seguridad 8
+    // Solo el administrador puede usar esta función.
     try { return ok(await listBulkReviewPeriods(await requireAdmin(request))); }
     catch (error) { return handleError(error, context); }
   },

@@ -82,6 +82,8 @@ async function updatePartner(id, input, principal) {
       WHERE socio_formador_id <> @id
         AND UPPER(REPLACE(REPLACE(REPLACE(rut, '.', ''), ' ', ''), '-', '')) = REPLACE(@taxId, '-', '');
     `);
+    // Regla de negocio 36
+    // El RUT de alumnos y socios y el correo de usuario no se repiten.
     if (duplicate.recordset.length) {
       throw new AppError(409, "PARTNER_RUT_EXISTS", "Ya existe otro socio formador con este RUT.");
     }

@@ -1,6 +1,8 @@
 const crypto = require("node:crypto");
 const { AppError } = require("./http");
 const { UUID_PATTERN } = require("./projectRoster");
+// Regla de negocio 25
+// El enlace de revisión del socio vence a los 21 días.
 const REVIEW_LINK_DAYS = 21;
 
 function canCloseReview(principal, teacherAssigned = false) {
@@ -13,9 +15,13 @@ function canCloseReview(principal, teacherAssigned = false) {
 function assertReviewHasFeedback(teams, evaluations) {
   const published = new Set(teams.map((team) => team.id.toLowerCase()));
   const evaluated = new Set(evaluations.map((evaluation) => evaluation.teamId.toLowerCase()));
+  // Regla de negocio 26
+  // El socio evalúa a los equipos publicados con nota de 1 a 5 y no cierra sin evaluaciones.
   if (!published.size || !evaluated.size) {
     throw new AppError(409, "REVIEW_WITHOUT_EVALUATIONS", "Debe existir al menos una evaluación guardada para cerrar la revisión.");
   }
+  // Regla de negocio 26
+  // El socio evalúa a los equipos publicados con nota de 1 a 5 y no cierra sin evaluaciones.
   if (evaluated.size !== evaluations.length || evaluations.some((evaluation) => !published.has(evaluation.teamId.toLowerCase()))) {
     throw new AppError(409, "REVIEW_INVALID_EVALUATIONS", "Las evaluaciones no coinciden con los equipos publicados. Solicita una revisión a coordinación.");
   }
@@ -36,6 +42,8 @@ function createReviewToken() {
   return crypto.randomBytes(32).toString("base64url");
 }
 
+// Seguridad 12
+// Los enlaces del socio y de entrega de video se guardan solo como hash SHA-256.
 function hashReviewToken(token) {
   if (typeof token !== "string" || !/^[A-Za-z0-9_-]{43}$/.test(token)) {
     throw new AppError(404, "REVIEW_UNAVAILABLE", "Este enlace no está disponible. Solicita un nuevo enlace a la coordinación.");
@@ -59,6 +67,8 @@ function validateReviewInput(payload = {}) {
   if (!strengths || !improvements || strengths.length > 4000 || improvements.length > 4000) {
     throw new AppError(400, "INVALID_REVIEW_TEXT", "Completa las fortalezas y las propuestas de mejora con un máximo de 4.000 caracteres por campo.");
   }
+  // Regla de negocio 26
+  // El socio evalúa a los equipos publicados con nota de 1 a 5 y no cierra sin evaluaciones.
   if (!Number.isInteger(payload.rating) || payload.rating < 1 || payload.rating > 5) {
     throw new AppError(400, "INVALID_REVIEW_RATING", "Selecciona una valoración de 1 a 5 estrellas.");
   }
@@ -66,6 +76,8 @@ function validateReviewInput(payload = {}) {
 }
 
 function assertReviewWritable(review) {
+  // Regla de negocio 27
+  // Una revisión completada ya no se modifica.
   if (review.completedAt) throw new AppError(409, "REVIEW_COMPLETED", "Esta revisión ya fue finalizada. Puedes consultar las evaluaciones guardadas.");
 }
 
@@ -77,6 +89,8 @@ function assertReviewTeam(teams, teamId) {
 
 function assertReviewComplete(teams, evaluations) {
   const reviewed = new Set(evaluations.map((item) => item.teamId.toLowerCase()));
+  // Regla de negocio 26
+  // El socio evalúa a los equipos publicados con nota de 1 a 5 y no cierra sin evaluaciones.
   if (!teams.length || teams.some((team) => !reviewed.has(team.id.toLowerCase()))) {
     throw new AppError(409, "REVIEW_INCOMPLETE", "Guarda la evaluación de todos los equipos antes de finalizar.");
   }

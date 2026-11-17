@@ -72,6 +72,8 @@ function prepareScope(rows, now) {
   return rows.filter((row) => !row.completedAt || Date.parse(row.expiresAt) > now).map((row) => {
     const teams = JSON.parse(row.teamsJson);
     const evaluations = JSON.parse(row.evaluationsJson);
+    // Regla de negocio 26
+    // El socio evalúa a los equipos publicados con nota de 1 a 5 y no cierra sin evaluaciones.
     if (!Array.isArray(teams) || !Array.isArray(evaluations)) throw new AppError(409, "REVIEW_INVALID_EVALUATIONS", `Revisa los datos de la revisión ${row.id} antes del cierre masivo.`);
     if (!row.completedAt && evaluations.length) assertReviewHasFeedback(teams, evaluations);
     return { id: row.id, projectCode: row.projectCode, campusName: row.campusName,
@@ -108,7 +110,11 @@ async function closeBulkPartnerReviews(input, principal) {
   requireAdministrator(principal);
   const { period, generatedAt, revision, confirmed, confirmation } = input || {};
   validatePeriod(period);
+  // Regla de negocio 28
+  // El cierre masivo de enlaces exige doble confirmación y una vista previa vigente.
   if (confirmed !== true || confirmation !== period) throw new AppError(400, "BULK_CONFIRMATION_REQUIRED", "Confirma las dos advertencias antes de cerrar los enlaces.");
+  // Regla de negocio 28
+  // El cierre masivo de enlaces exige doble confirmación y una vista previa vigente.
   if (typeof revision !== "string" || !/^[a-f0-9]{64}$/.test(revision)
     || typeof generatedAt !== "string" || !Number.isFinite(Date.parse(generatedAt))
     || Date.parse(generatedAt) > Date.now() + 60000 || Date.now() - Date.parse(generatedAt) > 15 * 60000) {
@@ -116,11 +122,15 @@ async function closeBulkPartnerReviews(input, principal) {
   }
   return withTransaction(async (transaction) => {
     const rows = await readScope(transaction, period, true);
+    // Regla de negocio 28
+    // El cierre masivo de enlaces exige doble confirmación y una vista previa vigente.
     if (revisionHash(rows, period, principal, generatedAt) !== revision) {
       throw new AppError(409, "BULK_PREVIEW_CHANGED", "Las revisiones o sus respuestas cambiaron. Actualiza la vista previa y confirma nuevamente.");
     }
     // Use the preview's cutoff: links that expire while confirming still belong to this operation.
     const records = prepareScope(rows, Date.parse(generatedAt));
+    // Regla de negocio 28
+    // El cierre masivo de enlaces exige doble confirmación y una vista previa vigente.
     if (!records.length) throw new AppError(409, "BULK_NOTHING_TO_CLOSE", "No hay enlaces que cerrar en este período.");
     const operationId = crypto.randomUUID();
     const result = await new sql.Request(transaction)
@@ -142,6 +152,8 @@ async function closeBulkPartnerReviews(input, principal) {
         INNER JOIN vcm.PeriodoAcademico pa ON pa.periodo_academico_id = s.periodo_academico_id
         WHERE pa.codigo = @period AND r.revocado_en IS NULL;
       `);
+    // Regla de negocio 28
+    // El cierre masivo de enlaces exige doble confirmación y una vista previa vigente.
     if (result.recordset.length !== records.length) throw new AppError(409, "BULK_PREVIEW_CHANGED", "El alcance cambió. Actualiza la vista previa y confirma nuevamente.");
     const summary = summaryOf(records);
     const closedAt = result.recordset[0].closedAt;

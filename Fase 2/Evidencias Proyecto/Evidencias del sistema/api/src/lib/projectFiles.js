@@ -27,6 +27,8 @@ function validateProjectFile(input, maxBytes) {
   }
   const name = sanitizeFilename(input.name);
   const extension = path.extname(name).toLowerCase();
+  // Regla de negocio 18
+  // Solo se aceptan tipos de archivo permitidos, con un máximo de 15 MB.
   if (!ALLOWED_EXTENSIONS.has(extension)) {
     throw new AppError(400, "FILE_TYPE_NOT_ALLOWED", "El tipo de archivo no está permitido.");
   }
@@ -34,6 +36,8 @@ function validateProjectFile(input, maxBytes) {
   if (!Number.isSafeInteger(size) || size <= 0) {
     throw new AppError(400, "EMPTY_FILE", "Selecciona un archivo con contenido.");
   }
+  // Regla de negocio 18
+  // Solo se aceptan tipos de archivo permitidos, con un máximo de 15 MB.
   if (size > maxBytes) {
     throw new AppError(413, "FILE_TOO_LARGE", `El archivo supera el máximo permitido de ${Math.round(maxBytes / 1024 / 1024)} MB.`);
   }
@@ -41,6 +45,8 @@ function validateProjectFile(input, maxBytes) {
   if (category === "ENTREGABLE_HITO_2" && !sectionId) {
     throw new AppError(400, "SECTION_REQUIRED", "Debes indicar la sección del entregable.");
   }
+  // Regla de negocio 19
+  // Un antecedente general de la propuesta no se asocia a una sección.
   if (category === "ANTECEDENTE" && sectionId) {
     throw new AppError(400, "SECTION_NOT_ALLOWED", "El antecedente general no debe asociarse a una sección.");
   }
@@ -61,15 +67,21 @@ function buildStorageKey(projectId, fileId, descriptor) {
 }
 
 function assertProjectFileDeletionAllowed(file, principal) {
+  // Regla de negocio 20
+  // Permisos y bloqueo de archivos según el rol, el estado del hito y del proyecto.
   if (file.category !== "ANTECEDENTE") {
     throw new AppError(403, "FILE_DELETE_DENIED", "Sólo se pueden eliminar antecedentes generales de la propuesta.");
   }
   const isAdministrator = principal.role === "admin";
   const isUploaderCoordinator = principal.role === "coordinator"
     && String(file.uploadedBy || "").toLowerCase() === String(principal.id || "").toLowerCase();
+  // Regla de negocio 20
+  // Permisos y bloqueo de archivos según el rol, el estado del hito y del proyecto.
   if (!isAdministrator && !isUploaderCoordinator) {
     throw new AppError(403, "FILE_DELETE_DENIED", "Sólo un Administrador o el Coordinador CITT que subió este archivo puede eliminarlo.");
   }
+  // Regla de negocio 20
+  // Permisos y bloqueo de archivos según el rol, el estado del hito y del proyecto.
   if (["FINALIZADO", "CANCELADO"].includes(file.projectStatus)) {
     throw new AppError(409, "PROJECT_FILE_LOCKED", "El archivo no puede eliminarse porque el proyecto ya está cerrado.");
   }

@@ -5,6 +5,8 @@ function assertTeacherProjectAccess(principal, project) {
   if (!project) {
     throw new AppError(404, "PROJECT_NOT_FOUND", "No se encontró el proyecto.");
   }
+  // Seguridad 7
+  // El docente solo accede a sus propias secciones y proyectos.
   if (!["teacher", "coordinator"].includes(principal?.role) || !principal?.canTeach || !project.teacherAssigned) {
     throw new AppError(403, "PROJECT_ACCESS_DENIED", "Sólo una cuenta con docencia asignada en este proyecto puede modificarlo.");
   }
@@ -13,6 +15,8 @@ function assertTeacherProjectAccess(principal, project) {
 
 function validateTeamInput(payload = {}, options = {}) {
   const allowEmpty = Boolean(options.allowEmpty);
+  // Regla de negocio 8
+  // Cada sección puede tener entre 1 y 20 equipos.
   if (!Array.isArray(payload.teams) || (!allowEmpty && payload.teams.length === 0) || payload.teams.length > 20) {
     throw new AppError(400, "INVALID_TEAMS", "Debes crear entre 1 y 20 equipos.");
   }
@@ -30,6 +34,8 @@ function validateTeamInput(payload = {}, options = {}) {
   });
 
   const teamKeys = teams.map((team) => `${team.sectionId}|${team.name.toLowerCase()}`);
+  // Regla de negocio 9
+  // El nombre de un equipo no se repite dentro de la sección.
   if (new Set(teamKeys).size !== teamKeys.length) {
     throw new AppError(400, "DUPLICATE_TEAM", "No puede repetirse el nombre de un equipo dentro de una sección.");
   }
@@ -70,6 +76,8 @@ function validateStudentAssignmentUpdate(payload = {}) {
   if (!sectionId || !STUDENT_ASSIGNMENT_STATUSES.has(status)) {
     throw new AppError(400, "INVALID_STUDENT_STATUS", "Debes indicar la sección y un estado válido para el estudiante.");
   }
+  // Regla de negocio 8
+  // Cada sección puede tener entre 1 y 20 equipos.
   if (status === "ASIGNADO" && (!Number.isInteger(teamNumber) || teamNumber < 1 || teamNumber > 20)) {
     throw new AppError(400, "TEAM_REQUIRED", "Selecciona un equipo entre 1 y 20 para el estudiante asignado.");
   }
@@ -80,6 +88,8 @@ function validateStudentAssignmentUpdate(payload = {}) {
 }
 
 function validateRosterAssignments(teams, roster, studentStates = null) {
+  // Regla de negocio 12
+  // Solo se asignan estudiantes de la nómina vigente de la sección.
   if (!Array.isArray(roster) || roster.length === 0) {
     throw new AppError(409, "PROJECT_WITHOUT_STUDENTS", "El proyecto no tiene estudiantes vigentes en las secciones asignadas.");
   }
@@ -89,9 +99,13 @@ function validateRosterAssignments(teams, roster, studentStates = null) {
   for (const team of teams) {
     for (const studentId of team.studentIds) {
       const student = students.get(studentId);
+      // Regla de negocio 12
+      // Solo se asignan estudiantes de la nómina vigente de la sección.
       if (!student || String(student.sectionId) !== team.sectionId) {
         throw new AppError(403, "STUDENT_OUTSIDE_ASSIGNMENT", "Un estudiante no pertenece a las secciones asignadas al docente.");
       }
+      // Regla de negocio 10
+      // Un estudiante pertenece a un solo equipo.
       if (assigned.has(studentId)) {
         throw new AppError(400, "STUDENT_IN_MULTIPLE_TEAMS", "Cada estudiante puede pertenecer a un solo equipo.");
       }
@@ -99,20 +113,28 @@ function validateRosterAssignments(teams, roster, studentStates = null) {
     }
   }
 
+  // Regla de negocio 11
+  // Para completar el Hito 1 toda la nómina debe tener estado y los asignados deben estar en un equipo.
   if (!studentStates && assigned.size !== students.size) {
     throw new AppError(400, "INCOMPLETE_TEAM_ASSIGNMENT", "Todos los estudiantes deben quedar asignados a un equipo.");
   }
   if (studentStates) {
     const states = new Map(studentStates.map((student) => [student.studentId, student]));
+    // Regla de negocio 11
+    // Para completar el Hito 1 toda la nómina debe tener estado y los asignados deben estar en un equipo.
     if (states.size !== students.size) {
       throw new AppError(400, "INCOMPLETE_STUDENT_STATUS", "Debes registrar el estado de toda la nómina antes de completar el Hito 1.");
     }
     for (const studentState of studentStates) {
       const student = students.get(studentState.studentId);
+      // Regla de negocio 12
+      // Solo se asignan estudiantes de la nómina vigente de la sección.
       if (!student || String(student.sectionId) !== studentState.sectionId) {
         throw new AppError(403, "STUDENT_OUTSIDE_ASSIGNMENT", "Un estudiante no pertenece a la sección asignada al docente.");
       }
       const belongsToTeam = assigned.has(studentState.studentId);
+      // Regla de negocio 11
+      // Para completar el Hito 1 toda la nómina debe tener estado y los asignados deben estar en un equipo.
       if ((studentState.status === "ASIGNADO") !== belongsToTeam) {
         throw new AppError(400, "INCONSISTENT_STUDENT_STATUS", "El estado asignado debe coincidir con la pertenencia del estudiante a un equipo.");
       }

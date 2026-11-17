@@ -8,6 +8,8 @@ function jsonRequest(transaction, payload) {
 }
 
 async function applyAcademicImport(parsed, filename, principal) {
+  // Regla de negocio 37
+  // Una importación con errores no se aplica.
   if (!parsed.canApply) throw new AppError(422, "ACADEMIC_IMPORT_HAS_ERRORS", "Corrige los errores antes de confirmar la carga.", parsed.issues);
   const hash = crypto.createHash("sha256").update(JSON.stringify(parsed.data)).digest("hex");
 

@@ -50,16 +50,24 @@ async function authorizeUpload(publicCode, descriptor, principal) {
   const target = result.recordset[0];
   if (!target) throw new AppError(404, "PROJECT_NOT_FOUND", "No se encontró el proyecto.");
   if (!target.sectionBelongs) throw new AppError(404, "PROJECT_SECTION_NOT_FOUND", "La sección no pertenece a este proyecto.");
+  // Regla de negocio 20
+  // Permisos y bloqueo de archivos según el rol, el estado del hito y del proyecto.
   if (descriptor.category === "ANTECEDENTE" && !["admin", "coordinator"].includes(principal.role)) {
     throw new AppError(403, "FILE_UPLOAD_DENIED", "No tienes permiso para adjuntar antecedentes a la propuesta.");
   }
+  // Regla de negocio 20
+  // Permisos y bloqueo de archivos según el rol, el estado del hito y del proyecto.
   if (descriptor.category === "ANTECEDENTE" && ["FINALIZADO", "CANCELADO"].includes(target.projectStatus)) {
     throw new AppError(409, "PROJECT_FILE_LOCKED", "No se pueden modificar los antecedentes de un proyecto cerrado.");
   }
+  // Regla de negocio 20
+  // Permisos y bloqueo de archivos según el rol, el estado del hito y del proyecto.
   if (descriptor.category === "ENTREGABLE_HITO_2"
     && (!(principal.role === "teacher" || principal.role === "coordinator") || !principal.canTeach || !target.teacherAssigned)) {
     throw new AppError(403, "FILE_UPLOAD_DENIED", "No tienes permiso para adjuntar entregables en esta sección.");
   }
+  // Regla de negocio 20
+  // Permisos y bloqueo de archivos según el rol, el estado del hito y del proyecto.
   if (descriptor.category === "ENTREGABLE_HITO_2" && !target.deliverableOpen) {
     throw new AppError(409, "DELIVERABLE_NOT_AVAILABLE", "El entregable sólo puede adjuntarse durante el Hito 2 y antes de cerrar la sección.");
   }
@@ -244,6 +252,8 @@ async function getProjectFile(publicCode, fileId, principal) {
     `);
   const file = result.recordset[0];
   if (!file) throw new AppError(404, "PROJECT_FILE_NOT_FOUND", "No se encontró el archivo solicitado.");
+  // Regla de negocio 20
+  // Permisos y bloqueo de archivos según el rol, el estado del hito y del proyecto.
   if (!["admin", "coordinator"].includes(principal.role) && !(principal.role === "teacher" && file.teacherAssigned)) {
     throw new AppError(403, "FILE_DOWNLOAD_DENIED", "No tienes permiso para descargar este archivo.");
   }

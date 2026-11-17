@@ -15,6 +15,8 @@ function validateVideoUpload(input = {}) {
   if (!name || name.length > 260 || !/\.mp4$/i.test(name) || /[\\/]/.test(name) || [...name].some((character) => character.charCodeAt(0) < 32)) {
     throw new AppError(400, "INVALID_VIDEO_NAME", "Selecciona un archivo MP4 con un nombre válido.");
   }
+  // Regla de negocio 21
+  // El video debe ser MP4 válido y pesar como máximo 200 MB.
   if (!Number.isSafeInteger(input.size) || input.size <= 0 || input.size > VIDEO_MAX_BYTES) {
     throw new AppError(400, "INVALID_VIDEO_SIZE", "El video debe pesar entre 1 byte y 200 MB.");
   }
@@ -33,8 +35,12 @@ async function uploadStorage(blobName, options = {}) {
 async function signVideoUpload(blobName, expiresAt, options = {}) {
   try {
     const deadline = Date.parse(expiresAt);
+    // Regla de negocio 22
+    // El enlace de entrega de video dura 90 días y cada intento de carga 15 minutos.
     if (!Number.isFinite(deadline) || deadline <= Date.now()) throw new AppError(409, "VIDEO_UPLOAD_EXPIRED", "El intento de carga venció. Inicia uno nuevo.");
     const { storage, client } = await uploadStorage(blobName, options);
+    // Seguridad 10
+    // El permiso de subida de un video dura como máximo 15 minutos.
     const expiresOn = new Date(Math.min(deadline, Date.now() + 15 * 60_000));
     // Create only: cannot overwrite an existing blob, read, list or delete files.
     const url = await storage.sign(client, { permissions: BlobSASPermissions.parse("c"), protocol: SASProtocol.HttpsAndHttp,
@@ -51,11 +57,15 @@ async function verifyVideoUpload(blobName, expectedSize, options = {}) {
     const { client } = await uploadStorage(blobName, options);
     const abortSignal = AbortSignal.timeout(10_000);
     const properties = await client.getProperties({ abortSignal });
+    // Regla de negocio 21
+    // El video debe ser MP4 válido y pesar como máximo 200 MB.
     if (properties.contentLength !== expectedSize || properties.contentLength > VIDEO_MAX_BYTES
       || properties.contentType?.split(";")[0].toLowerCase() !== "video/mp4") {
       throw new AppError(422, "VIDEO_UPLOAD_INVALID", "El video recibido no coincide con el archivo esperado o supera el límite permitido.");
     }
     const header = await client.downloadToBuffer(0, Math.min(12, expectedSize), { abortSignal });
+    // Regla de negocio 21
+    // El video debe ser MP4 válido y pesar como máximo 200 MB.
     if (header.length < 12 || header.subarray(4, 8).toString("ascii") !== "ftyp") {
       throw new AppError(422, "VIDEO_UPLOAD_INVALID", "El archivo recibido no tiene una cabecera MP4 válida.");
     }

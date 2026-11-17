@@ -7,6 +7,8 @@ app.http("listUsers", {
   methods: ["GET"], authLevel: "anonymous", route: "users",
   handler: async (request, context) => {
     try {
+      // Seguridad 8
+      // Solo el administrador puede usar esta función.
       await requireAdmin(request);
       return ok(await listUsers());
     } catch (error) { return handleError(error, context); }

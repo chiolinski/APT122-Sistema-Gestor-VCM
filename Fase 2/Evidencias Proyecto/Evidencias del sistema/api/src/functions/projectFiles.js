@@ -20,6 +20,8 @@ app.http("uploadProjectFile", {
     try {
       const principal = await requireUser(request);
       const length = Number(request.headers.get("content-length") || 0);
+      // Regla de negocio 18
+      // Solo se aceptan tipos de archivo permitidos, con un máximo de 15 MB.
       if (length > getConfig().projectFileMaxBytes) throw new AppError(413, "FILE_TOO_LARGE", "El archivo supera el tamaño máximo permitido.");
       const url = new URL(request.url);
       const body = Buffer.from(await request.arrayBuffer());

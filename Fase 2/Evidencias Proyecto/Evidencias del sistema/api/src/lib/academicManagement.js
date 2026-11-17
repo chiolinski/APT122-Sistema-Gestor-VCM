@@ -51,9 +51,13 @@ function validateAcademicAdjustment(payload = {}, applying = false) {
     if (input.studentId === input.otherStudentId) throw new AppError(400, "SAME_STUDENT", "Selecciona dos alumnos distintos.");
   }
   if (applying) {
+    // Regla de negocio 35
+    // Para confirmar un ajuste hay que escribir el código de la sección.
     if (payload.confirmed !== true || !String(payload.confirmationCode || "").trim()) {
       throw new AppError(400, "ADJUSTMENT_CONFIRMATION_REQUIRED", "Confirma el cambio y escribe el código de la sección.");
     }
+    // Regla de negocio 29
+    // Todo ajuste académico se aplica solo sobre una vista previa vigente (sin cambios entre medio).
     if (!/^[0-9a-f]{64}$/i.test(String(payload.previewVersion || ""))) {
       throw new AppError(400, "ADJUSTMENT_PREVIEW_REQUIRED", "Revisa la vista previa antes de aplicar el cambio.");
     }
@@ -64,6 +68,8 @@ function validateAcademicAdjustment(payload = {}, applying = false) {
 }
 
 function assertCompatibleStudentSections(source, target) {
+  // Regla de negocio 33
+  // Traslados e intercambios solo entre secciones compatibles (misma asignatura y período).
   if (source.subjectId !== target.subjectId || source.period !== target.period) {
     throw new AppError(409, "INCOMPATIBLE_STUDENT_SECTIONS", "Los traslados e intercambios de alumnos requieren la misma asignatura y período. Para otra asignatura, usa Matricular alumno existente.");
   }
@@ -79,6 +85,8 @@ function validateTeacherRegistration(payload = {}) {
   if (name.length < 3 || name.length > 180 || email.length > 320 || !/^\S+@\S+\.\S+$/.test(email)) {
     throw new AppError(400, "INVALID_TEACHER_DATA", "Revisa el nombre y el correo institucional del profesor.");
   }
+  // Regla de negocio 35
+  // Para confirmar un ajuste hay que escribir el código de la sección.
   if (payload.confirmed !== true) throw new AppError(400, "ADJUSTMENT_CONFIRMATION_REQUIRED", "Confirma el registro del nuevo profesor.");
   return { sourceId, name, email, reason: reasonFor(payload.reason) };
 }

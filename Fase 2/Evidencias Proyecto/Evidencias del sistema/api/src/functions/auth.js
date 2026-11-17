@@ -6,6 +6,8 @@ const { authenticate, createSession, revokeSession } = require("../repositories/
 const { getAccountProfile } = require("../repositories/accountProfileRepository");
 const { resetPassword } = require("../repositories/userRepository");
 
+// Seguridad 5
+// Cookie de sesión HttpOnly y SameSite=Strict, con duración limitada (12 horas).
 function sessionCookie(token, expires = false) {
   const { secureCookies, sessionHours } = getConfig();
   const attributes = [

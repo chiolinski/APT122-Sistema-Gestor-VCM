@@ -3,6 +3,8 @@ const { assertLocalVideo } = require("./localSafety");
 const { getConfig } = require("./config");
 const { AppError } = require("./http");
 
+// Seguridad 9
+// El permiso de lectura de un video para el socio dura 5 minutos.
 const VIDEO_SAS_TTL_MS = 5 * 60 * 1000;
 
 function videoAccessExpiry(reviewExpiresAt, now = Date.now()) {
@@ -42,6 +44,8 @@ async function resolvePartnerVideo(context, team, options = {}) {
     const expiresOn = videoAccessExpiry(options.reviewExpiresAt);
     if (team.videoDeliveryPending) return { status: "pending", url: null };
     const number = getVideoTeamNumber(team);
+    // Regla de negocio 24
+    // La revisión del socio solo se crea con equipos que tienen video.
     if (!team.videoBlobName && number !== null && options.teams?.filter((item) => getVideoTeamNumber(item) === number).length > 1) {
       throw new AppError(409, "REVIEW_VIDEO_AMBIGUOUS_TEAM", "Hay equipos con el mismo número. Solicita a la coordinación que revise sus nombres.");
     }
@@ -50,6 +54,8 @@ async function resolvePartnerVideo(context, team, options = {}) {
       : new BlobServiceClient(accountUrl, { retryOptions: { maxTries: 1 } }).getContainerClient(containerName));
     if (privateAccess) {
       const policy = await storage.getContainerProperties({ abortSignal: AbortSignal.timeout(5000) });
+      // Seguridad 11
+      // El contenedor de videos debe ser privado.
       if (policy.blobPublicAccess) {
         throw new AppError(503, "REVIEW_VIDEO_CONTAINER_PUBLIC", "Los videos todavía no tienen habilitado el acceso privado. Contacta a la coordinación.");
       }
@@ -65,6 +71,8 @@ async function resolvePartnerVideo(context, team, options = {}) {
         if (error.statusCode === 404 && code === "BlobNotFound") return null;
         throw error;
       } finally { clearTimeout(timeout); }
+      // Regla de negocio 21
+      // El video debe ser MP4 válido y pesar como máximo 200 MB.
       if (properties.contentType?.split(";")[0].toLowerCase() !== "video/mp4" || properties.contentLength <= 0) {
         throw new AppError(422, "REVIEW_VIDEO_FORMAT", "El archivo del equipo debe ser un video MP4 válido. Solicita a la coordinación que revise su formato.");
       }

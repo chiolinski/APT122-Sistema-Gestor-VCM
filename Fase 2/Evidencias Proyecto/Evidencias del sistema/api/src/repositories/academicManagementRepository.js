@@ -10,6 +10,8 @@ const sectionLabel = (section) => `${section.subjectCode} / ${section.code} · $
 
 async function assertAuditAvailable(connection) {
   const result = await requestFor(connection).query(`SELECT OBJECT_ID('vcm.Auditoria', 'U') AS auditTable;`);
+  // Regla de negocio 30
+  // Si la auditoría no está disponible no se guardan ajustes académicos.
   if (!result.recordset[0]?.auditTable) throw new AppError(503, "AUDIT_REQUIRED", "La auditoría no está disponible. No se pueden guardar ajustes académicos.");
 }
 
@@ -101,10 +103,14 @@ async function sectionContext(connection, sectionId, lock = false) {
 }
 
 function assertEditableSection(section) {
+  // Regla de negocio 32
+  // No se usan secciones ni alumnos inactivos.
   if (!section.active || !section.subjectActive || !section.campusActive) {
     throw new AppError(409, "INACTIVE_SECTION", "La sección, asignatura o sede no está activa.");
   }
   const closed = section.projects.find((project) => ["FINALIZADO", "CANCELADO"].includes(project.status) || project.closingStatus === "COMPLETADO");
+  // Regla de negocio 34
+  // No se ajustan secciones cerradas ni se quitan secciones con actividad.
   if (closed) throw new AppError(409, "SECTION_ADJUSTMENT_LOCKED", `La sección está cerrada en ${closed.code}. No puede modificarse desde este panel.`);
 }
 
@@ -153,6 +159,8 @@ async function teacherAssigned(connection, sectionId, teacherId) {
 }
 
 function assertTeacherReady(teacher) {
+  // Regla de negocio 41
+  // Una cuenta docente solo se crea para un profesor de la carga académica.
   if (!teacher.active || !teacher.accountReady) {
     throw new AppError(409, "TEACHER_ACCOUNT_REQUIRED", `${teacher.name} necesita un registro activo y una cuenta docente habilitada. Revísala en Usuarios antes de asignarlo.`);
   }
@@ -167,9 +175,13 @@ async function getStudent(connection, input) {
     WHERE (@studentId IS NOT NULL AND alumno_id = @studentId)
       OR (@rut IS NOT NULL AND UPPER(REPLACE(REPLACE(REPLACE(rut, '.', ''), '-', ''), ' ', '')) = @rut);
   `);
+  // Regla de negocio 36
+  // El RUT de alumnos y socios y el correo de usuario no se repiten.
   if (result.recordset.length > 1) throw new AppError(409, "DUPLICATE_STUDENT_RUT", "Hay más de un alumno con ese RUT. Revisa los registros antes de continuar.");
   const student = result.recordset[0];
   if (!student && input.action !== "STUDENT_ADD") throw new AppError(404, "STUDENT_NOT_FOUND", "No se encontró el alumno.");
+  // Regla de negocio 32
+  // No se usan secciones ni alumnos inactivos.
   if (student && !student.active) throw new AppError(409, "INACTIVE_STUDENT", "El alumno está desactivado. Revisa su registro académico antes de matricularlo.");
   if (student && input.action === "STUDENT_ADD" && student.name.localeCompare(input.name, "es", { sensitivity: "base" }) !== 0) {
     throw new AppError(409, "STUDENT_NAME_CONFLICT", `Ese RUT ya pertenece a ${student.name}. Usa Matricular alumno existente; este panel no renombra personas.`);
@@ -227,6 +239,8 @@ async function prepareAdjustment(connection, input) {
     if (input.action === "TEACHER_ASSIGN" || input.action === "TEACHER_REPLACE") {
       assertTeacherReady(teacher);
       if (assigned) throw new AppError(409, "TEACHER_ALREADY_ASSIGNED", "El profesor entrante ya está asignado a esa sección.");
+    // Regla de negocio 29
+    // Todo ajuste académico se aplica solo sobre una vista previa vigente (sin cambios entre medio).
     } else if (!assigned) throw new AppError(409, "TEACHER_ASSIGNMENT_CHANGED", "El profesor ya no está asignado a la sección seleccionada.");
     if (input.action === "TEACHER_ASSIGN") changes.push({ person: teacher.name, from: "Sin asignación en esta sección", to: sectionLabel(section) });
     if (input.action === "TEACHER_REMOVE") {
@@ -238,17 +252,23 @@ async function prepareAdjustment(connection, input) {
         WHERE assignment.seccion_id = @sectionId AND assignment.vigente = 1 AND assignment.docente_id <> @teacherId
           AND usr.activo = 1 AND usr.rol IN ('TEACHER', 'COORDINATOR') AND usr.password_hash IS NOT NULL;
       `);
+      // Regla de negocio 31
+      // Un proyecto no puede quedar sin docente.
       if (result.recordset[0].total === 0 && section.projects.length) throw new AppError(409, "LAST_PROJECT_TEACHER", "Es el único profesor habilitado de una sección con proyectos. Usa Reemplazar profesor para no dejarla sin responsable.");
       changes.push({ person: teacher.name, from: sectionLabel(section), to: "Asignación desactivada; cuenta y otras secciones conservadas" });
     }
     if (input.action === "TEACHER_REPLACE") {
       const previous = await getTeacher(connection, input.previousTeacherId);
+      // Regla de negocio 29
+      // Todo ajuste académico se aplica solo sobre una vista previa vigente (sin cambios entre medio).
       if (!await teacherAssigned(connection, section.id, previous.id)) throw new AppError(409, "TEACHER_ASSIGNMENT_CHANGED", "El profesor saliente ya no está asignado a esta sección.");
       context.teachers.push(previous);
       changes.push({ person: previous.name, from: sectionLabel(section), to: "Asignación desactivada" });
       changes.push({ person: teacher.name, from: "Profesor entrante", to: sectionLabel(section) });
     }
     if (input.action === "TEACHER_SWAP") {
+      // Regla de negocio 33
+      // Traslados e intercambios solo entre secciones compatibles (misma asignatura y período).
       if (section.period !== target.period) throw new AppError(409, "INCOMPATIBLE_TEACHER_PERIODS", "El intercambio de profesores requiere secciones del mismo período.");
       const other = await getTeacher(connection, input.otherTeacherId);
       assertTeacherReady(teacher); assertTeacherReady(other);
@@ -269,6 +289,8 @@ async function prepareAdjustment(connection, input) {
     let source = null;
     const enrolling = ["STUDENT_ADD", "STUDENT_ENROLL"].includes(input.action);
     if (enrolling && enrollment?.active) throw new AppError(409, "STUDENT_ALREADY_ENROLLED", "El alumno ya tiene matrícula vigente en esta asignatura. Usa Trasladar alumno si corresponde.");
+    // Regla de negocio 29
+    // Todo ajuste académico se aplica solo sobre una vista previa vigente (sin cambios entre medio).
     if (!enrolling && (!enrollment?.active || !sameId(enrollment.sectionId, section.id))) {
       throw new AppError(409, "STUDENT_ENROLLMENT_CHANGED", "El alumno ya no pertenece a la sección de origen indicada.");
     }
@@ -285,6 +307,8 @@ async function prepareAdjustment(connection, input) {
     if (input.action === "STUDENT_SWAP") {
       const other = await getStudent(connection, { action: input.action, studentId: input.otherStudentId });
       const otherEnrollment = await enrollmentFor(connection, other.id, section.subjectId);
+      // Regla de negocio 29
+      // Todo ajuste académico se aplica solo sobre una vista previa vigente (sin cambios entre medio).
       if (!otherEnrollment?.active || !sameId(otherEnrollment.sectionId, target.id)) throw new AppError(409, "STUDENT_ENROLLMENT_CHANGED", "El otro alumno ya no pertenece a la segunda sección.");
       const otherActivity = await studentActivity(connection, other.id, target.id, section.id);
       context.students.push({ student: other, enrollment: otherEnrollment, source: target, destination: section, activity: otherActivity });
@@ -315,6 +339,8 @@ async function setTeacherAssignment(connection, teacherId, sectionId, active) {
       UPDATE vcm.DocenteSeccion SET vigente = 0 WHERE docente_id = @teacherId AND seccion_id = @sectionId AND vigente = 1;
       SELECT @@ROWCOUNT AS affected;
     `);
+    // Regla de negocio 29
+    // Todo ajuste académico se aplica solo sobre una vista previa vigente (sin cambios entre medio).
     if (result.recordset[0].affected !== 1) throw new AppError(409, "TEACHER_ASSIGNMENT_CHANGED", "La asignación docente cambió. Revisa nuevamente la vista previa.");
   }
 }
@@ -339,6 +365,8 @@ async function applyStudentChange(connection, item, actorId) {
         WHERE matricula_id = @enrollmentId AND seccion_id = @sourceId AND vigente = @expectedActive;
         SELECT @@ROWCOUNT AS affected;
       `);
+    // Regla de negocio 29
+    // Todo ajuste académico se aplica solo sobre una vista previa vigente (sin cambios entre medio).
     if (result.recordset[0].affected !== 1) throw new AppError(409, "STUDENT_ENROLLMENT_CHANGED", "La matrícula cambió. Se canceló toda la operación.");
   } else {
     await requestFor(connection).input("studentId", sql.UniqueIdentifier, studentId)
@@ -371,7 +399,11 @@ async function executeAcademicAdjustment(input, principal, preview = false) {
       await assertAuditAvailable(transaction);
       const { context, plan } = await prepareAdjustment(transaction, input);
       if (preview) return plan;
+      // Regla de negocio 35
+      // Para confirmar un ajuste hay que escribir el código de la sección.
       if (input.confirmationCode !== plan.confirmationCode) throw new AppError(400, "WRONG_SECTION_CONFIRMATION", "El código escrito no coincide con la sección principal.");
+      // Regla de negocio 29
+      // Todo ajuste académico se aplica solo sobre una vista previa vigente (sin cambios entre medio).
       if (input.previewVersion !== plan.version) throw new AppError(409, "ADJUSTMENT_PREVIEW_STALE", "Los datos cambiaron desde la vista previa. Revísalos y confirma otra vez.");
       const { section, target } = context;
       switch (input.action) {
@@ -396,6 +428,8 @@ async function executeAcademicAdjustment(input, principal, preview = false) {
       return { applied: true, title: plan.title };
     });
   } catch (error) {
+    // Regla de negocio 29
+    // Todo ajuste académico se aplica solo sobre una vista previa vigente (sin cambios entre medio).
     if ([2601, 2627, 1205].includes(error.number)) throw new AppError(409, "ACADEMIC_ADJUSTMENT_CONFLICT", "Los datos cambiaron o existe un registro duplicado. No se guardó ningún cambio; vuelve a revisar la vista previa.");
     throw error;
   }

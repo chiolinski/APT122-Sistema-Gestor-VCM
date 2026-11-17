@@ -99,9 +99,13 @@ async function createUser(input, principal) {
             WHERE activo = 1
               AND UPPER(REPLACE(REPLACE(REPLACE(identificador_fuente, '.', ''), '-', ''), ' ', '')) = @teacherSourceId;
           `);
+        // Regla de negocio 41
+        // Una cuenta docente solo se crea para un profesor de la carga académica.
         if (!teacher.recordset[0]) {
           throw new AppError(400, "TEACHER_NOT_FOUND", "No se encontró ese RUT o código en la carga académica aplicada.");
         }
+        // Regla de negocio 41
+        // Una cuenta docente solo se crea para un profesor de la carga académica.
         if (teacher.recordset[0].userId) {
           throw new AppError(409, "TEACHER_ALREADY_LINKED", "Ese docente ya tiene una cuenta de acceso vinculada.");
         }
@@ -162,6 +166,8 @@ async function createUser(input, principal) {
       return { ...user, teacherSourceId: linkedTeacherSourceId, academicLinked };
     });
   } catch (error) {
+    // Regla de negocio 36
+    // El RUT de alumnos y socios y el correo de usuario no se repiten.
     if ([2601, 2627].includes(error.number)) {
       throw new AppError(409, "EMAIL_IN_USE", "Ya existe una cuenta con ese correo electrónico.");
     }
@@ -170,6 +176,8 @@ async function createUser(input, principal) {
 }
 
 async function setUserActive(userId, active, principal) {
+  // Regla de negocio 39
+  // El administrador no puede desactivar su propia cuenta.
   if (userId === principal?.id && !active) {
     throw new AppError(400, "CANNOT_DISABLE_SELF", "No puedes desactivar tu propia cuenta.");
   }
@@ -196,6 +204,8 @@ async function setUserActive(userId, active, principal) {
 }
 
 async function resetPassword(userId, password, principal = null, denyOwnAccount = false) {
+  // Regla de negocio 40
+  // Cada usuario cambia su propia contraseña solo desde Mi cuenta.
   if (denyOwnAccount && userId === principal?.id) {
     throw new AppError(400, "USE_OWN_PASSWORD_FLOW", "Cambia tu propia contraseña desde Mi cuenta.");
   }

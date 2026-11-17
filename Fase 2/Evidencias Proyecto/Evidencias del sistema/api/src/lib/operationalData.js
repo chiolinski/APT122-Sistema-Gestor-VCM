@@ -75,6 +75,8 @@ function validateMilestoneReopenInput(payload = {}, milestoneNumber) {
   if (![1, 2, 3].includes(number)) {
     throw new AppError(400, "INVALID_MILESTONE", "El hito indicado no es válido.");
   }
+  // Regla de negocio 5
+  // Reapertura: solo se reabre un hito completado, con motivo de al menos 10 caracteres; sin reabrirlo no se corrige.
   if (reason.length < 10) {
     throw new AppError(400, "REOPEN_REASON_TOO_SHORT", "El motivo de reapertura debe tener al menos 10 caracteres.");
   }

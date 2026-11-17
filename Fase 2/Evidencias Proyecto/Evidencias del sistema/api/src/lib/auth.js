@@ -17,6 +17,8 @@ async function getPrincipal(request) {
   return token ? findSession(token) : null;
 }
 
+// Seguridad 6
+// Control de acceso por rol: toda ruta exige sesión y el rol correspondiente.
 async function requireUser(request) {
   const principal = await getPrincipal(request);
   if (!principal) throw new AppError(401, "AUTH_REQUIRED", "Debes iniciar sesión para realizar esta operación.");
@@ -31,6 +33,8 @@ async function requireRole(request, roles) {
   return principal;
 }
 
+// Seguridad 8
+// Solo el administrador puede usar esta función.
 function requireAdmin(request) {
   return requireRole(request, ["admin"]);
 }

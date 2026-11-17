@@ -40,6 +40,8 @@ async function getHitoTwoAccess(connection, publicCode, sectionId, principal, lo
     `);
   const access = result.recordset[0];
   if (!access) throw new AppError(404, "HITO_TWO_SECTION_NOT_FOUND", "No se encontró una sección activa para este Hito 2.");
+  // Seguridad 7
+  // El docente solo accede a sus propias secciones y proyectos.
   if (!["admin", "coordinator"].includes(principal.role)
     && !(principal.role === "teacher" && principal.canTeach && access.teacherAssigned)) {
     throw new AppError(403, "SECTION_ACCESS_DENIED", "No tienes permiso para consultar esta sección.");
@@ -48,9 +50,13 @@ async function getHitoTwoAccess(connection, publicCode, sectionId, principal, lo
 }
 
 function assertHitoTwoOpen(access) {
+  // Regla de negocio 15
+  // El Hito 2 queda bloqueado hasta que coordinación lo programa y llega su fecha de apertura.
   if (access.projectStatus !== "EN_EJECUCION" || access.milestoneTwoStatus === "COMPLETADO") {
     throw new AppError(409, "HITO_TWO_LOCKED", "El Hito 2 de esta sección no está abierto. Coordinación debe reabrirlo si requiere cambios.");
   }
+  // Regla de negocio 15
+  // El Hito 2 queda bloqueado hasta que coordinación lo programa y llega su fecha de apertura.
   if (access.milestoneOneStatus !== "COMPLETADO" || access.allMilestoneOneStatus !== "COMPLETADO" || !access.available) {
     throw new AppError(409, "HITO_TWO_NOT_OPEN", "Primero completa el Hito 1 y espera la apertura del Hito 2 programada por coordinación.");
   }
@@ -103,8 +109,12 @@ async function prepareVideoDelivery(connection, publicCode, sectionId, principal
   const access = await getHitoTwoAccess(connection, publicCode, sectionId, principal);
   assertHitoTwoOpen(access);
   const teams = await getSectionTeams(connection, access.projectId, sectionId);
+  // Regla de negocio 24
+  // La revisión del socio solo se crea con equipos que tienen video.
   if (!teams.length) throw new AppError(409, "REVIEW_WITHOUT_TEAMS", "Primero deben conformarse los equipos de esta sección.");
   const videos = await inspectSectionVideos(access, teams);
+  // Regla de negocio 16
+  // Para cerrar el Hito 2 cada equipo debe haber entregado su video.
   if (videos.some((video) => video.status !== "available")) {
     throw new AppError(409, "HITO_TWO_VIDEOS_REQUIRED", "Todos los equipos deben tener su video disponible antes de registrar la entrega y solicitar la retroalimentación.");
   }
@@ -141,9 +151,15 @@ async function getSectionFeedback(connection, projectId, sectionId, { lock = fal
 }
 
 async function assertSectionFeedbackReviewed(connection, projectId, sectionId, input) {
+  // Regla de negocio 17
+  // El docente debe confirmar que revisó la retroalimentación del socio.
   if (input.feedbackReviewed !== true) throw new AppError(400, "FEEDBACK_ACK_REQUIRED", "Confirma que revisaste el resumen de la retroalimentación de tu sección.");
   const review = await getSectionFeedback(connection, projectId, sectionId, { lock: true });
+  // Regla de negocio 17
+  // El docente debe confirmar que revisó la retroalimentación del socio.
   if (!review?.completedAt) throw new AppError(409, "FEEDBACK_NOT_COMPLETED", "La revisión del socio debe finalizar antes de cerrar el Hito 2, por el socio o mediante el cierre interno autorizado.");
+  // Regla de negocio 17
+  // El docente debe confirmar que revisó la retroalimentación del socio.
   if (review.id.toLowerCase() !== String(input.reviewId || "").toLowerCase()) {
     throw new AppError(409, "FEEDBACK_CHANGED", "La revisión cambió. Actualiza y lee el resumen vigente antes de cerrar el Hito 2.");
   }

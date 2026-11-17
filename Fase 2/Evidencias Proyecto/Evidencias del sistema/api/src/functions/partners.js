@@ -30,6 +30,8 @@ app.http("updatePartner", {
   methods: ["PATCH"], authLevel: "anonymous", route: "partners/{id}",
   handler: async (request, context) => {
     try {
+      // Seguridad 8
+      // Solo el administrador puede usar esta función.
       const principal = await requireRole(request, ["admin"]);
       return ok(await updatePartner(request.params.id, validatePartnerInput(await readJson(request)), principal));
     } catch (error) { return handleError(error, context); }

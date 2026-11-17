@@ -3,6 +3,8 @@ const { getConfig } = require("../lib/config");
 const { sql, getPool, withTransaction } = require("../lib/db");
 const { DUMMY_HASH, verifyPassword } = require("../lib/password");
 
+// Seguridad 4
+// El token de sesión se guarda en la base solo como hash SHA-256.
 function hashToken(token) {
   return crypto.createHash("sha256").update(token).digest("hex");
 }
@@ -53,6 +55,8 @@ async function authenticate(email, password) {
 
   if (!user || !valid || !user.active || locked) {
     if (user && !valid && user.active && !locked) {
+      // Seguridad 3
+      // Tras 5 intentos fallidos la cuenta se bloquea 15 minutos.
       await pool.request().input("id", sql.UniqueIdentifier, user.id).query(`
         UPDATE vcm.Usuario SET
           intentos_fallidos = intentos_fallidos + 1,

@@ -34,6 +34,8 @@ async function previewPartnerImport(parsed) {
 }
 
 async function applyPartnerImport(parsed, filename, principal) {
+  // Regla de negocio 37
+  // Una importación con errores no se aplica.
   if (!parsed.canApply) {
     throw new AppError(422, "PARTNER_IMPORT_HAS_ERRORS", "Corrige los errores antes de confirmar la carga.", parsed.issues);
   }
