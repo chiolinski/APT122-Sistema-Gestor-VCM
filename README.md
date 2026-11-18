@@ -9,17 +9,25 @@ Proyecto académico APT122 para gestionar proyectos de Vinculación con el Medio
 | Informe final con índice y anexos | [Word](Fase%202/Evidencias%20Grupales/APT122_Informe_Final_Proyecto_VCM.docx) · [PDF](Fase%202/Evidencias%20Grupales/APT122_Informe_Final_Proyecto_VCM.pdf) |
 | Presentación final | [PowerPoint](Fase%202/Evidencias%20Grupales/APT122_Presentacion_Final_Proyecto_VCM.pptx) |
 | Planilla de evaluación | [Excel](Fase%202/Evidencias%20Grupales/APT122_Planilla_Evaluacion_Fase2.xlsx) |
-| Diario de reflexión grupal | [Word](Fase%202/Evidencias%20Grupales/APT122_Diario_Reflexion_Grupal_Fase2.docx) |
 
 ## Navegación del repositorio
 
-- [Fase 1](Fase%201/README.md) reúne la definición del proyecto y las evidencias de esa etapa.
-- [Fase 2](Fase%202/README.md) organiza el avance, el cierre y las evidencias del proyecto.
-- [Documentación del proyecto](Fase%202/Evidencias%20Proyecto/README.md) enlaza las épicas, el backlog y las historias de usuario.
-- [Código y guía de arranque](Fase%202/Evidencias%20Proyecto/Evidencias%20del%20sistema/README.md#arranque-completo-con-docker) explica cómo levantar la aplicación local con Docker.
-- [Dockerfile](Fase%202/Evidencias%20Proyecto/Evidencias%20del%20sistema/Dockerfile), [Compose de infraestructura](Fase%202/Evidencias%20Proyecto/Evidencias%20del%20sistema/compose.yaml) y [Compose de aplicación](Fase%202/Evidencias%20Proyecto/Evidencias%20del%20sistema/compose.app.yaml).
-- [Cierre técnico](Fase%202/Evidencias%20Proyecto/Evidencias%20del%20sistema/docs/CIERRE_TECNICO.md) reúne la arquitectura, el modelo entidad-relación y UML. [Fuentes de los diagramas](Fase%202/Evidencias%20Proyecto/Evidencias%20del%20sistema/docs/diagramas/).
-- [Resultados de verificación](Fase%202/Evidencias%20Proyecto/Evidencias%20del%20sistema/VERIFICACION.md) documenta las pruebas del entorno local.
+### Evidencias académicas
+
+- [Fase 1](Fase%201/README.md) reúne la definición, la planificación y las evidencias de esa etapa.
+- [Fase 2](Fase%202/README.md) enlaza las evidencias grupales e individuales, el avance y la entrega final.
+- [Evidencias del proyecto](Fase%202/Evidencias%20Proyecto/README.md) reúne las épicas, el backlog, las historias de usuario y el modelo relacional del avance.
+
+### Diseño y código
+
+- [Cierre técnico](Fase%202/Evidencias%20Proyecto/Evidencias%20del%20sistema/docs/CIERRE_TECNICO.md) reúne la [arquitectura](Fase%202/Evidencias%20Proyecto/Evidencias%20del%20sistema/docs/CIERRE_TECNICO.md#1-arquitectura), el [modelo de datos actualizado](Fase%202/Evidencias%20Proyecto/Evidencias%20del%20sistema/docs/CIERRE_TECNICO.md#2-modelo-de-datos) y los [diagramas UML](Fase%202/Evidencias%20Proyecto/Evidencias%20del%20sistema/docs/CIERRE_TECNICO.md#3-diagramas-uml).
+- [Fuentes de los diagramas](Fase%202/Evidencias%20Proyecto/Evidencias%20del%20sistema/docs/diagramas/) y [código del sistema](Fase%202/Evidencias%20Proyecto/Evidencias%20del%20sistema/).
+
+### Arranque, demostración y pruebas
+
+- [Arranque local con Docker](Fase%202/Evidencias%20Proyecto/Evidencias%20del%20sistema/README.md#arranque-completo-con-docker), [Dockerfile](Fase%202/Evidencias%20Proyecto/Evidencias%20del%20sistema/Dockerfile), [Compose de infraestructura](Fase%202/Evidencias%20Proyecto/Evidencias%20del%20sistema/compose.yaml) y [Compose de aplicación](Fase%202/Evidencias%20Proyecto/Evidencias%20del%20sistema/compose.app.yaml).
+- [Guion docente de DUOC26-014](Fase%202/Evidencias%20Proyecto/Evidencias%20del%20sistema/DEMOSTRACION_LOCAL.md#demostración-del-proyecto-duoc26-014) y [preparación de DUOC26](Fase%202/Evidencias%20Proyecto/Evidencias%20del%20sistema/DEMOSTRACION_LOCAL.md#demostración-de-informática-y-telecomunicaciones-de-duoc-uc).
+- [Resultados de las pruebas](Fase%202/Evidencias%20Proyecto/Evidencias%20del%20sistema/VERIFICACION.md) y [verificación de DUOC26](Fase%202/Evidencias%20Proyecto/Evidencias%20del%20sistema/VERIFICACION.md#duoc26-en-la-copia-académica).
 
 ## Requisitos
 

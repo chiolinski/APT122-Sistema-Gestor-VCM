@@ -83,4 +83,20 @@ DUOC26 agrega 16 proyectos, 48 secciones, 576 estudiantes, 61 cuentas internas y
 
 Los nombres de personas se generan combinando nombres de pila y apellidos. La generación es reproducible para reanudar la carga. Las cuentas y los contactos usan `example.test`. Los socios, la matrícula y los proyectos son simulados.
 
-En Seguimiento, busca `DUOC26` y selecciona el período `2026-2`. Para descargar solo esta selección, usa **Descargar Excel → Vista filtrada**. La guía con cuentas y proyectos se genera en `.local/showcase-duoc/GUIA.md`. DUOC26 guarda su propio estado en esa carpeta y coexiste con DEMO26. Si la carga se interrumpe, vuelve a ejecutar el mismo comando desde el mismo clon y con los mismos volúmenes para reanudarla.
+La guía generada en `.local/showcase-duoc/GUIA.md` contiene la contraseña inicial y el listado de proyectos de prueba. DUOC26 guarda su estado en esa carpeta y coexiste con DEMO26. Si la carga se interrumpe, vuelve a ejecutar el mismo comando desde el mismo clon y con los mismos volúmenes para reanudarla.
+
+### Demostración del proyecto DUOC26-014
+
+Abre `http://127.0.0.1:5176` e inicia sesión con la cuenta docente ficticia `duoc.docente040@example.test`. Usa el proyecto `DUOC26-014` y la sección `UC0141D`. En el estado inicial, las otras dos secciones ya están finalizadas. `UC0141D` tiene el Hito 1 completo, videos entregados y evaluación del socio registrada. Su Hito 2 está pendiente de cierre docente.
+
+1. **Propuesta.** Abre el proyecto en «Mis proyectos vinculados». Muestra la propuesta, la asignatura, el socio formador y la sección a cargo.
+2. **Hito 1. Nómina y equipos.** En «Estado de los estudiantes», muestra la nómina y cómo se distribuyen los estudiantes en los equipos. Señala que el Hito 1 ya está completo.
+3. **Hito 2. Videos y evaluación.** Abre «Videos de los equipos» y luego «Retroalimentación final». Muestra las entregas y la evaluación registrada por el socio.
+4. **Hito 2. Cierre docente.** Revisa «Avance del resultado» y «Conclusiones». Marca «Revisé la retroalimentación final de los equipos de mi sección», pulsa «Cerrar Hito 2 de mi sección» y comprueba que se habilita el Hito 3.
+5. **Hito 3. Cierre de la sección.** Pulsa «Finalizar sección». Comprueba que la sección queda finalizada y que el proyecto pasa a **Finalizado** al quedar completas sus tres secciones.
+
+El ensayo cambia el estado del proyecto. Para repetirlo desde el mismo punto, usa una instancia local de prueba con el escenario inicial. Volver a ejecutar la carga conserva el estado existente.
+
+### Resultados de las pruebas con DUOC26
+
+El [registro de verificación](VERIFICACION.md#duoc26-en-la-copia-académica) documenta la carga, su repetición y las pruebas aprobadas. Para reproducir el contraste de indicadores, abre Seguimiento con una cuenta ficticia habilitada, busca `DUOC26`, elige el período `2026-2` y descarga el Excel con «Vista filtrada». En la hoja «Comparación por sede», el resultado de Maipú coincidió con Seguimiento en 60 de 84 estudiantes con equipo (71,4 %) y 10 de 21 hitos completados (47,6 %).
