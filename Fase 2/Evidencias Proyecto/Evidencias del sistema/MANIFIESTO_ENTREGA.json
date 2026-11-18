@@ -17,11 +17,6 @@
       "sha256": "8a357e6f6eeb6dcfb6f1b1321dc333acb3853c504f7f041023e61c42bd2cf68b"
     },
     {
-      "archivo": "AGENTS.md",
-      "bytes": 1499,
-      "sha256": "32c456e8190f1e35275dc5347cad8b9ad923b18ce1aebbf69fbd62151c03c36d"
-    },
-    {
       "archivo": "api/host.json",
       "bytes": 262,
       "sha256": "35dc4219b9efb193622536cd7eeb29054092de2d4841080982005ed7fb361984"
@@ -540,11 +535,6 @@
       "archivo": "compose.yaml",
       "bytes": 752,
       "sha256": "ac17cd5e73fef6658aa8486eec13881bcf771e625029931879edd51debb80581"
-    },
-    {
-      "archivo": "CONTEXTO_PROYECTO.md",
-      "bytes": 7084,
-      "sha256": "2b939eb80332f198ff4491ed1019a805cb322408f7f1cde98ac4a4fb8aafc5cd"
     },
     {
       "archivo": "database/migrations/001_initial_schema.sql",

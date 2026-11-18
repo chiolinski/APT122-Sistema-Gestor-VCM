@@ -27,7 +27,7 @@ La web React se entrega con Vite. La interfaz llama a sus servicios en `src/serv
 | Functions → Azurite | SDK Azure Storage Blob | Gestiona documentos privados, verifica la existencia y tamaño de videos y emite firmas temporales. |
 | Navegador ↔ Azurite | HTTP local con URL SAS | El equipo sube el video y el socio autorizado lo reproduce. La URL usa el puerto local 10000 y se emite para un blob específico. |
 
-En Docker, web y API comparten el contenedor `app`. Los relés de loopback de ese contenedor se conectan a los servicios fijos `sql` y `storage` de Compose. El navegador sigue accediendo por los puertos originales del equipo. Consulta el [mapa de carpetas y reglas](../CONTEXTO_PROYECTO.md#arquitectura-y-mapa-de-código).
+En Docker, web y API comparten el contenedor `app`. Los relés de loopback de ese contenedor se conectan a los servicios fijos `sql` y `storage` de Compose. El navegador sigue accediendo por los puertos originales del equipo.
 
 ## 2. Modelo de datos
 

@@ -98,7 +98,7 @@ Para reproducir la demostración DUOC26, ejecuta `npm run local:demo:duoc` con l
 
 ## Git e incorporación de cambios
 
-El Git de esta carpeta se inicializó en `main`. La referencia académica es [APT122-Sistema-Gestor-VCM](https://github.com/chiolinski/APT122-Sistema-Gestor-VCM), donde el código se encuentra en `Fase 2/Evidencias Proyecto/Evidencias del sistema/`. Consulta [CONTEXTO_PROYECTO.md](CONTEXTO_PROYECTO.md) para comparar versiones desde esa ruta.
+El Git de esta carpeta se inicializó en `main`. La referencia académica es [APT122-Sistema-Gestor-VCM](https://github.com/chiolinski/APT122-Sistema-Gestor-VCM), donde el código se encuentra en `Fase 2/Evidencias Proyecto/Evidencias del sistema/`.
 
 Si partes de una copia de archivos entregada sin `.git`, puedes crear un historial local desde su raíz:
 
